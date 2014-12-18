@@ -1,9 +1,10 @@
 # filter DNG callset initially on basis of
 
+# library(reshape)
+
 # - in_child_vcf, not in parent vcf
 # - max_af<0.01
 # - remove dodgy samples with too many DNM calls
-
 
 # annotate DNG callset
 
@@ -13,263 +14,258 @@
 # - with site-specific strand bias (SB) and parental alt (PA) frequency p values against null
 # - with gene-specific parental alt (PA) frequency, after removal of SB filtered sites
 
-
 # set PASS/FAIL status for research analyses of gene-specific enrichment
 
-
-dnms<-read.delim("/Volumes/DDD_meh/Analysis/Exome/Calling_Pipeline/DNG_0.5.4/y1_y2000_y2_y3_4344_trios_extracted_passed_variants_full_21.11.14.tsv", header=T)
-
-error.rate<-0.002 # estimated at 0.0012 from DNM calls in parents in DDg2P genes, set slightly higher to be conservative
-
-SB.filt<-1e-3 # threshold for removing sites with too high strand bias, or Parental Alt Frequency
-
-
-# annotate with numeric max allele freq
-
-max_freq<-as.numeric(as.character(dnms$max_af))
-
-max_freq[is.na(max_freq)]<-0
-
-dnms<-cbind(dnms, max_freq)
-
-
-
-# keep sites in child vcf not in parental vcfs
-
-dnms.vcf<-dnms[which((dnms$in_child_vcf-dnms$in_father_vcf-dnms$in_mother_vcf)==1),]
-
-# 123919 remaining
-
-
-# filter on max_af
-
-dnms.rare<-dnms.vcf[which(dnms.vcf$max_freq<0.01),]
-
-# 23490 remaining
-
-
-
-# remove dnms in samples with >> too many DNMs, focus on too many DNMs at high quality
-# NEED TO UPDATE WITH CAROLINE'S NEW SAMPLE FILE LIST, OR USE PRE-FILTERED SET OF DNMS
-
-
-sample.fails<-c("276227", "258876", "273778", "258921", "272110", "260337", "264083", "264084", "269602", "265624")
-
-
-
-dnms.rare.qc<-dnms.rare[-which((dnms.rare$decipher_id %in% sample.fails)=="TRUE"),]
-
-# 17794 remaining
-
-
-
-# Annotate dnms hitting coding exons or splice sites
-
-coding_splicing<-c("frameshift_variant", "inframe_deletion", "inframe_insertion", "initiator_codon_variant", "missense_variant",  "splice_acceptor_variant", "splice_donor_variant", "stop_gained", "stop_lost", "synonymous_variant")
-
-dnms.coding<-cbind(dnms.rare.qc, dnms.rare.qc$consequence %in% coding_splicing)
-
-#dnms.rare.qc[which((dnms.rare.qc$consequence %in% coding_splicing)=="TRUE"),]
-# 9057 remaining
-
-
-#dnms.coding.high<-dnms.coding[which(dnms.coding$pp_dnm>0.9),]
-# 5536 remaining
-
-
-
-# annotate with presence in DNG monoallelic/XL genes
-# NEED TO UPDATE FOR MOST RECENT DDG2P
-
-ddg2p<-read.delim("~/Desktop/DDD/DDG2P/ddg2p_with_gene_positions_and_ids_20140718.txt", header=T, sep="|")
-
-allelic<-c("Monoallelic", "Hemizygous", "X-linked dominant", "Both")
-
-allelic.index<-ddg2p$Allelic_requirement %in% allelic 
-
-mono.xl.ddg2p<-ddg2p[which(allelic.index=="TRUE"),]
-
-mono.xl.dd.genes<-unique(mono.xl.ddg2p$GeneSymbol)
-
-dnms.mono.xl.ddg2p<-dnms.coding$symbol %in% mono.xl.dd.genes
-
-dnms.coding<-cbind(dnms.coding, dnms.mono.xl.ddg2p)
-
-
-# extract ALT and REF counts of F and R reads
-
-dng<-dnms.coding
-
-dp4.child<-t(as.data.frame(strsplit(as.character(dng$dp4_child), split=",")))
-
-dp4.child.REF.F<-as.numeric(dp4.child[,1])
-dp4.child.REF.R<-as.numeric(dp4.child[,2])
-dp4.child.ALT.F<-as.numeric(dp4.child[,3])
-dp4.child.ALT.R<-as.numeric(dp4.child[,4])
-
-dp4.father <-t(as.data.frame(strsplit(as.character(dng$dp4_father), split=",")))
-
-dp4.father.REF.F<-as.numeric(dp4.father[,1])
-dp4.father.REF.R<-as.numeric(dp4.father[,2])
-dp4.father.ALT.F<-as.numeric(dp4.father[,3])
-dp4.father.ALT.R<-as.numeric(dp4.father[,4])
-
-dp4.mother<-t(as.data.frame(strsplit(as.character(dng$dp4_mother), split=",")))
-
-dp4.mother.REF.F<-as.numeric(dp4.mother[,1])
-dp4.mother.REF.R<-as.numeric(dp4.mother[,2])
-dp4.mother.ALT.F<-as.numeric(dp4.mother[,3])
-dp4.mother.ALT.R<-as.numeric(dp4.mother[,4])
-
-count.child.alt<-dp4.child.ALT.F + dp4.child.ALT.R
-
-dnms.coding<-cbind(dnms.coding, dp4.child.REF.F, dp4.child.REF.R, dp4.child.ALT.F, dp4.child.ALT.R, dp4.father.REF.F, dp4.father.REF.R, dp4.father.ALT.F, dp4.father.ALT.R, dp4.mother.REF.F, dp4.mother.REF.R, dp4.mother.ALT.F, dp4.mother.ALT.R, count.child.alt)
-
-
-# add count of number of times that site is called
-
-key<-paste(dnms.coding$chrom, dnms.coding$pos, dnms.coding$alt, sep="_")
-
-table.key<-table(key)
-
-count.sites<-table.key[match(key, row.names(table.key))]
-
-dnms.coding<-cbind(dnms.coding, key, count.sites)
-
-
-# add count of number times that gene is called
-
-table.genes<-table(dnms.coding$symbol)
-
-count.genes<-table.genes[match(dnms.coding$symbol, row.names(table.genes))]
-
-dnms.coding<-cbind(dnms.coding, count.genes)
-
-
-# vectors to store information from loop, code 2 = not assessed
-
-dng<-dnms.coding
-
-num.sites<-length(dng[,1])
-
-
-SB_pval<-rep(2,length(dng[,1]))
-PA_pval<-rep(2,length(dng[,1]))
-PA_pval_gene<-rep(2,length(dng[,1]))
-
-count.REF.F<-rep(2,length(dng[,1]))
-count.REF.R<-rep(2,length(dng[,1]))
-count.ALT.F<-rep(2,length(dng[,1]))
-count.ALT.R<-rep(2,length(dng[,1]))
-count.parent.ALT<-rep(2,length(dng[,1]))
-count.parent.REF<-rep(2,length(dng[,1]))
-min.parent.ALT<-rep(2,length(dng[,1]))
-
-
-
-# loop to calculate site-specific PA and SB values
-
-#for (i in seq(1,10)) { #for testing
-
-for (i in seq(1,num.sites)) {
-	
-	# annotate sites where both parents have ALT reads
-	
-	min.parent.ALT[i]<-min(dng$dp4.mother.ALT.F[i]+dng$dp4.mother.ALT.R[i], dng$dp4.father.ALT.F[i]+dng$dp4.father.ALT.R[i])
-	
-	
-	# calculcate site-specific SB p value
-	
-	dng.site<-dng[which(dng$key==dng$key[i]),]
-		
-	count.REF.F[i]<-sum(dng.site$dp4.child.REF.F)+sum(dng.site$dp4.mother.REF.F)+sum(dng.site$dp4.father.REF.F)
-	count.REF.R[i]<-sum(dng.site$dp4.child.REF.R)+sum(dng.site$dp4.mother.REF.R)+sum(dng.site$dp4.father.REF.R)
-	count.ALT.F[i]<-sum(dng.site$dp4.child.ALT.F)+sum(dng.site$dp4.mother.ALT.F)+sum(dng.site$dp4.father.ALT.F)
-	count.ALT.R[i]<-sum(dng.site$dp4.child.ALT.R)+sum(dng.site$dp4.mother.ALT.R)+sum(dng.site$dp4.father.ALT.R)
-					
-	SB_pval[i]<-fisher.test(matrix(c(count.REF.F[i], count.REF.R[i], count.ALT.F[i], count.ALT.R[i]), nrow=2))$p.value
-	 
-	
-	# calculate site-specific PA p value
-				
-	count.parent.ALT[i]<-sum(dng.site$dp4.mother.ALT.F)+sum(dng.site$dp4.father.ALT.F)+sum(dng.site$dp4.mother.ALT.R)+sum(dng.site$dp4.father.ALT.R)
-			
-	count.parent.REF[i]<-sum(dng.site$dp4.mother.REF.F)+sum(dng.site$dp4.father.REF.F)+sum(dng.site$dp4.mother.REF.R)+sum(dng.site$dp4.father.REF.R)
-	
-	PA_pval[i]<-binom.test(as.numeric(count.parent.ALT[i]), as.numeric(count.parent.ALT[i])+as.numeric(count.parent.REF[i]), error.rate, alternative="g")$p.value
-		
-#	print(i)
-		
+ddg2p_path = "/lustre/scratch113/projects/ddd/resources/ddd_data_releases/2014-11-04/DDG2P/DDG2P_freeze_with_gencode19_genomic_coordinates_20141118_fixed.txt"
+de_novos_path = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2014-11-04/denovo_gear_trios_extracted_passed_variants_18.12.14.tsv"
+dnms = read.table(de_novos_path, header=TRUE, sep="\t", stringsAsFactors=FALSE)
+
+# estimated error rate at 0.0012 from DNM calls in parents in DDG2P genes, set 
+# slightly higher to be conservative
+error.rate = 0.002 
+
+# threshold for removing sites with too high strand bias, or Parental Alt Frequency
+SB.filt = 1e-3 
+
+#' run some preliminary filtering of de novos
+#' 
+#' We want to filter out de novos with high MAF, where they are not present in
+#' the child VCF, or are present in the parental VCFs
+preliminary_filtering <- function(dnms) {
+    # annotate with numeric max allele freq
+    # fix the blank and null max AF values
+    dnms$max_af[dnms$max_af == "" | dnms$max_af == "."] = 0
+    
+    # one de novo has a comma separated list of MAF values (both above 0.1)
+    dnms$max_af[grepl(",", dnms$max_af)] = NA
+    dnms$max_af = as.numeric(dnms$max_af)
+    
+    # keep sites in child vcf not in parental vcfs (leaves 123919)
+    dnms = dnms[dnms$in_child_vcf == 1 & dnms$in_father_vcf == 0 & dnms$in_mother_vcf == 0, ]
+    
+    # filter on max_af (leaves 23490)
+    dnms = dnms[dnms$max_af < 0.01 & !is.na(dnms$max_af), ]
+    
+    # remove dnms in samples with >> too many DNMs, focus on too many DNMs at 
+    # high quality (leaves 17794)
+    # NEED TO UPDATE WITH CAROLINE'S NEW SAMPLE FILE LIST, OR USE PRE-FILTERED SET OF DNMS
+    sample.fails = c("276227", "258876", "273778", "258921", "272110", "260337",
+     "264083", "264084", "269602", "265624")
+    dnms = dnms[!dnms$decipher_id %in% sample.fails, ]
+    
+    # Annotate dnms hitting coding exons or splice sites
+    coding_splicing = c("frameshift_variant", "inframe_deletion", 
+        "inframe_insertion", "initiator_codon_variant", "missense_variant",  
+        "splice_acceptor_variant", "splice_donor_variant", "stop_gained", 
+        "stop_lost", "synonymous_variant")
+    dnms$coding = dnms$consequence %in% coding_splicing
+    
+    # filtering down to coding (leaves 9057)
+    # dnms = dnms[dnms$coding, ]
+    
+    # filter to high quality de novos (leaves 5536)
+    # dnms = dnms[dnms$pp_dnm > 0.9, ]
+    
+    return(dnms)
 }
 
 
-# annotate sites with site-specific SB and PA p values
+#' annotate with presence in DNG monoallelic/XL genes
+#' NEED TO UPDATE FOR MOST RECENT DDG2P
+annotate_with_ddg2p <- function(dnms) {
+    ddg2p = read.table(ddg2p_path, header=TRUE, sep="\t", stringsAsFactors=FALSE)
+    
+    # find the dominantly inherited genes
+    allelic = c("Monoallelic", "Hemizygous", "X-linked dominant", "Both")
+    mono.xl.ddg2p = ddg2p[ddg2p$Allelic_requirement %in% allelic, ]
+    mono.xl.dd.genes = unique(mono.xl.ddg2p$GeneSymbol)
+    
+    dnms$dnms.mono.xl.ddg2p = dnms$symbol %in% mono.xl.dd.genes
+    
+    return(dnms)
+}
 
-dnms.coding.pvals<-cbind(dnms.coding,count.REF.F, count.REF.R, count.ALT.F, count.ALT.R, count.parent.ALT, count.parent.REF, min.parent.ALT, SB_pval, PA_pval)
+#' extract ALT and REF counts of forward and reverse reads for the members of 
+#' each trio
+extract_alt_and_ref_counts <- function(dnms) {
+    
+    dnms$dp4.child = strsplit(dnms$dp4_child, split=",")
+    
+    dnms$child.REF.F = as.numeric(sapply(dnms$dp4.child, "[", 1))
+    dnms$child.REF.R = as.numeric(sapply(dnms$dp4.child, "[", 2))
+    dnms$child.ALT.F = as.numeric(sapply(dnms$dp4.child, "[", 3))
+    dnms$child.ALT.R = as.numeric(sapply(dnms$dp4.child, "[", 4))
+    
+    dnms$dp4.father = strsplit(as.character(dnms$dp4_father), split=",")
+    
+    dnms$father.REF.F = as.numeric(sapply(dnms$dp4.father, "[", 1))
+    dnms$father.REF.R = as.numeric(sapply(dnms$dp4.father, "[", 2))
+    dnms$father.ALT.F = as.numeric(sapply(dnms$dp4.father, "[", 3))
+    dnms$father.ALT.R = as.numeric(sapply(dnms$dp4.father, "[", 4))
+    
+    dnms$dp4.mother = strsplit(as.character(dnms$dp4_mother), split=",")
+    
+    dnms$mother.REF.F = as.numeric(sapply(dnms$dp4.mother, "[", 1))
+    dnms$mother.REF.R = as.numeric(sapply(dnms$dp4.mother, "[", 2))
+    dnms$mother.ALT.F = as.numeric(sapply(dnms$dp4.mother, "[", 3))
+    dnms$mother.ALT.R = as.numeric(sapply(dnms$dp4.mother, "[", 4))
+    
+    dnms$count.child.alt = dnms$child.ALT.F + dnms$child.ALT.R
+    
+    return(dnms)
+}
 
+#'' count of number of times that site is called
+count_site_and_gene_recurrence <- function(dnms) {
+    
+    dnms$key = paste(dnms$chrom, dnms$pos, dnms$alt, sep="_")
+    table.key = table(dnms$key)
+    dnms$count.sites = table.key[match(dnms$key, row.names(table.key))]
+    
+    # count of number times that gene is called
+    table.genes = table(dnms$symbol)
+    dnms$count.genes = table.genes[match(dnms.coding$symbol, row.names(table.genes))]
+    
+    return(dnms)
+}
 
+#' counts REF and ALT alleles in reads for de novo events at a single site
+#'
+#' We 
+get_allele_counts <- function(variant) {
+    
+    REF.F = sum(variant[, c("child.REF.F", "mother.REF.F", "father.REF.F")])
+    REF.R = sum(variant[, c("child.REF.R", "mother.REF.R", "father.REF.R")])
+    ALT.F = sum(variant[, c("child.ALT.F", "mother.ALT.F", "father.ALT.F")])
+    ALT.R = sum(variant[, c("child.ALT.R", "mother.ALT.R", "father.ALT.R")])
+    
+    # count parental alt and ref
+    parent.ALT = sum(variant[, c("mother.ALT.F", "father.ALT.F", "mother.ALT.R", "father.ALT.R")])
+    parent.REF = sum(variant[, c("mother.REF.F", "father.REF.F", "mother.REF.R", "father.REF.R")])
+    
+    return(list(REF.F=REF.F, REF.R=REF.R, ALT.F=ALT.F, ALT.R=ALT.R, 
+        parent.ALT=parent.ALT, parent.REF=parent.REF))
+}
 
-# loop to calculate gene-specific PA values after SB filtering
+#' checks for strand bias per de novo site using the ref and alt counts
+site_strand_bias <- function(site) {
+    x = c(site[["REF.F"]], site[["REF.R"]], site[["ALT.F"]], site[["ALT.R"]])
+    x = matrix(x, nrow=2)
+    return(fisher.test(x)$p.value)
+}
 
-dng<-dnms.coding.pvals
+#' tests each site for deviation from expected behaviour
+test_sites <- function(dnms) {
+    alleles = subset(dnms, select=c("key", 
+        "child.REF.F", "child.REF.R", "child.ALT.F", "child.ALT.R",
+        "mother.REF.F", "mother.REF.R", "mother.ALT.F", "mother.ALT.R",
+        "father.REF.F", "father.REF.R", "father.ALT.F", "father.ALT.R"))
+    
+    variants = split(alleles, alleles$key)
+    
+    # count the ref and alt alleles for each de novo site
+    counts = lapply(variants, get_allele_counts)
+    results = data.frame(matrix(unlist(counts), ncol=length(counts[[1]])))
+    names(results) = names(counts[[1]])
+    results$key = names(counts)
+    
+    # run a binomial test of the number of parental alts
+    parent_counts = data.frame(results$parent.ALT, (results$parent.ALT + results$parent.REF))
+    PA_pval = apply(parent_counts, 1, binom.test, p=error.rate, alternative="greater")
+    results$PA_pval = as.numeric(sapply(PA_pval, "[", "p.value"))
+    
+    # check for strand bias by fishers exact test on the allele counts
+    allele_counts = lapply(split(results, seq_along(results[, 1])), as.list)
+    results$SB_pval = sapply(allele_counts, site_strand_bias)
+    
+    return(results)
+}
 
-#for (i in seq(1,10)) { #for testing
+test_genes <-function(dnms) {
+    # loop to calculate gene-specific PA values after SB filtering
+    alleles = subset(dnms, select=c("key", 
+        "symbol", "SB_pval", "var_type",
+        "mother.REF.F", "mother.REF.R", "mother.ALT.F", "mother.ALT.R",
+        "father.REF.F", "father.REF.R", "father.ALT.F", "father.ALT.R"))
+    
+    genes = split(alleles, alleles$symbol)
+    
+    
 
-for (i in seq(1,num.sites)) {
-	
-		# calculate PA p value
-			
-		dng.gene<-dng[which(dng$symbol==dng$symbol[i]),] # collate all DNMs called in the same gene
-		
-		remove.index<-which(dnms.coding$SB_pval<SB.filt & dnms.coding$var_type=="DENOVO-SNP") # index of sites to remove
-			
-		if(length(remove.index>0)) dng.gene<-dng.gene[-which(dnms.coding$SB_pval<SB.filt & dnms.coding$var_type=="DENOVO-SNP"),] # remove SNVs failing the SB filter, if any are present
-		
-		if(length(dng.gene[,1])>0) {
-			
-			count.parent.ALT[i]<-sum(dng.gene$dp4.mother.ALT.F)+sum(dng.gene$dp4.father.ALT.F)+sum(dng.gene$dp4.mother.ALT.R)+sum(dng.gene$dp4.father.ALT.R) # count number of parental REF alleles across sites
-			
-			count.parent.REF[i]<-sum(dng.gene$dp4.mother.REF.F)+sum(dng.gene$dp4.father.REF.F)+sum(dng.gene$dp4.mother.REF.R)+sum(dng.gene$dp4.father.REF.R) # count number of parental ALT alleles across sites
-	
-			PA_pval_gene[i]<-binom.test(as.numeric(count.parent.ALT[i]), as.numeric(count.parent.ALT[i])+as.numeric(count.parent.REF[i]), error.rate, alternative="g")$p.value # calculate p value assuming an error rate of seeing the observed number of ALT reads
-
-			}
-
-#	print(i)
-		
+    dng = dnms.coding.pvals
+    
+    for (i in 1:num_sites) {
+        # calculate PA p value
+        
+        # collate all DNMs called in the same gene
+        dng.gene = dng[dng$symbol == dng$symbol[i], ] 
+        
+        # index of sites to remove
+        remove.index = dng.gene$SB_pval < SB.filt & dng.gene$var_type == "DENOVO-SNP"
+        
+        if (any(remove.index)) {
+            # remove SNVs failing the strand bias filter, if any are present
+            dng.gene = dng.gene[!remove.index, ] 
+        }
+        
+        if (nrow(dng.gene) > 0) {
+            # count number of parental REF and ALT alleles across sites
+            parent.ALT[i] = sum(dng.gene[, c("mother.ALT.F", "father.ALT.F", "mother.ALT.R", "father.ALT.R")])
+            parent.REF[i] = sum(dng.gene[, c("mother.REF.F", "father.REF.F", "mother.REF.R", "father.REF.R")])
+            
+            # calculate p value assuming an error rate of seeing the observed number of ALT reads
+            PA_pval_gene[i] = binom.test(parent.ALT[i], parent.ALT[i] + parent.REF[i], error.rate, alternative="greater")$p.value
+        }
+    } 
 }
 
 
-dnms.coding.all<-cbind(dnms.coding.pvals, PA_pval_gene)
+dnms.coding = preliminary_filtering(dnms)
+dnms.coding = annotate_with_ddg2p(dnms.coding)
+dnms.coding = extract_alt_and_ref_counts(dnms.coding)
+dnms.coding = count_site_and_gene_recurrence(dnms.coding)
+
+site_results = test_sites(dnms.coding)
+dnms.coding = merge(dnms.coding, site_results, by="key", all.x=TRUE)
+
+# get the minimum alternate allele count from the parents
+dnms.coding$min.parent.ALT = apply(data.frame(dnms.coding$mother.ALT.F + dnms.coding$mother.ALT.R, dnms.coding$father.ALT.F + dnms.coding$father.ALT.R), 1, min)
 
 
-# set flags for filtering, fail samples with SB < threshold, or any 2 of (i) both parents have ALTs (ii) site-specific PA < threshold, (iii) gene-specific PA < threshold, if >1 sites called in gene
 
-overall.pass<-rep("PASS",length(dnms.coding.all[,1])) # store overall PASS status
-PA.gene.pass<-rep("PASS",length(dnms.coding.all[,1])) # store intermediate PA gene PASS status
-PA.pass<-rep("PASS",length(dnms.coding.all[,1])) # store intermediate PA PASS status
+
+
+
+# set flags for filtering, fail samples with SB < threshold, or any 2 of 
+#   (i) both parents have ALTs 
+#   (ii) site-specific PA < threshold, 
+#   (iii) gene-specific PA < threshold, if > 1 sites called in gene
+
+overall.pass = rep("PASS", nrow(dnms.coding.all)) # store overall PASS status
+PA.gene.pass = rep("PASS", nrow(dnms.coding.all)) # store intermediate PA gene PASS status
+PA.pass = rep("PASS", nrow(dnms.coding.all)) # store intermediate PA PASS status
 
 # fail SNVs with SB
-overall.pass[which(dnms.coding.all$SB_pval<SB.filt & dnms.coding.all$var_type=="DENOVO-SNP")]<-"FAIL"
+overall.pass[dnms.coding.all$SB_pval < SB.filt & dnms.coding.all$var_type == "DENOVO-SNP"] = "FAIL"
 
 # fail sites with gene-specific PA, only if >1 sites called per gene
 # NEED TO ADAPT TO AVOID SITES WITHOUT GENE SYMBOL ANNOTATED BEING REGARDED AS BEING IN THE SAME GENE
-PA.gene.pass[which(dnms.coding.all$PA_pval_gene<SB.filt & dnms.coding.all$count.genes>1)]<-"FAIL"
+PA.gene.pass[dnms.coding.all$PA_pval_gene < SB.filt & dnms.coding.all$count.genes > 1] = "FAIL"
 
 # fail sites with PA, any two of three classes
-PA.pass[which(PA.gene.pass=="FAIL" & dnms.coding.all$PA_pval<SB.filt)]<-"FAIL"
-PA.pass[which(PA.gene.pass=="FAIL" & dnms.coding.all$min.parent.ALT>0)]<-"FAIL"
-PA.pass[which(dnms.coding.all$PA_pval<SB.filt & dnms.coding.all$min.parent.ALT>0)]<-"FAIL"
+PA.pass[PA.gene.pass == "FAIL" & dnms.coding.all$PA_pval < SB.filt] = "FAIL"
+PA.pass[PA.gene.pass == "FAIL" & dnms.coding.all$min.parent.ALT > 0] = "FAIL"
+PA.pass[dnms.coding.all$PA_pval < SB.filt & dnms.coding.all$min.parent.ALT > 0] = "FAIL"
 
 # fail sites with PA
-overall.pass[which(PA.pass=="FAIL")]<-"FAIL"
+overall.pass[PA.pass == "FAIL"] = "FAIL"
 
 #table(overall.pass)
 
-#table(overall.pass, dnms.coding.all[,41])
+#table(overall.pass, dnms.coding.all[, 41])
 
 
-dnms.coding.all<-cbind(dnms.coding.all, overall.pass)
+dnms.coding.all = cbind(dnms.coding.all, overall.pass)
 
 
 # write out
@@ -277,4 +273,5 @@ dnms.coding.all<-cbind(dnms.coding.all, overall.pass)
 write.table(dnms.coding.all, file="~/Desktop/dnms.coding.all.txt", quote=F, row.names=F, sep="\t")
 
 
-
+
+
