@@ -165,7 +165,7 @@ test_sites <- function(dnms) {
     
     # count the ref and alt alleles for each de novo site
     counts = lapply(variants, get_allele_counts)
-    results = data.frame(matrix(unlist(counts), ncol=length(counts[[1]])))
+    results = data.frame(matrix(unlist(counts), ncol=length(counts[[1]]), byrow=TRUE))
     names(results) = names(counts[[1]])
     results$key = names(counts)
     
@@ -181,6 +181,14 @@ test_sites <- function(dnms) {
     return(results)
 }
 
+get_parental_counts <- function(vars) {
+    
+    parent.ALT = sum(vars[, c("mother.ALT.F", "father.ALT.F", "mother.ALT.R", "father.ALT.R")])
+    parent.REF = sum(vars[, c("mother.REF.F", "father.REF.F", "mother.REF.R", "father.REF.R")])
+    
+    return(list(parent.ALT=parent.ALT, parent.REF=parent.REF))
+}
+
 test_genes <-function(dnms) {
     # loop to calculate gene-specific PA values after SB filtering
     alleles = subset(dnms, select=c("key", 
@@ -188,35 +196,20 @@ test_genes <-function(dnms) {
         "mother.REF.F", "mother.REF.R", "mother.ALT.F", "mother.ALT.R",
         "father.REF.F", "father.REF.R", "father.ALT.F", "father.ALT.R"))
     
+    # exclude indels, and de novo events that fail the strand bias filter
+    alleles = alleles[!(alleles$SB_pval < SB.filt & alleles$var_type == "DENOVO-SNP"), ]
+    
     genes = split(alleles, alleles$symbol)
+    counts = lapply(genes, get_parental_counts)
+    results = data.frame(matrix(unlist(counts), ncol=length(counts[[1]]), byrow=TRUE))
+    names(results) = names(counts[[1]])
+    results$symbol = names(counts)
     
+    parent_counts = data.frame(results$parent.ALT, (results$parent.ALT + results$parent.REF))
+    PA_pval = apply(parent_counts, 1, binom.test, p=error.rate, alternative="greater")
+    results$PA_pval_gene = as.numeric(sapply(PA_pval, "[", "p.value"))
     
-
-    dng = dnms.coding.pvals
-    
-    for (i in 1:num_sites) {
-        # calculate PA p value
-        
-        # collate all DNMs called in the same gene
-        dng.gene = dng[dng$symbol == dng$symbol[i], ] 
-        
-        # index of sites to remove
-        remove.index = dng.gene$SB_pval < SB.filt & dng.gene$var_type == "DENOVO-SNP"
-        
-        if (any(remove.index)) {
-            # remove SNVs failing the strand bias filter, if any are present
-            dng.gene = dng.gene[!remove.index, ] 
-        }
-        
-        if (nrow(dng.gene) > 0) {
-            # count number of parental REF and ALT alleles across sites
-            parent.ALT[i] = sum(dng.gene[, c("mother.ALT.F", "father.ALT.F", "mother.ALT.R", "father.ALT.R")])
-            parent.REF[i] = sum(dng.gene[, c("mother.REF.F", "father.REF.F", "mother.REF.R", "father.REF.R")])
-            
-            # calculate p value assuming an error rate of seeing the observed number of ALT reads
-            PA_pval_gene[i] = binom.test(parent.ALT[i], parent.ALT[i] + parent.REF[i], error.rate, alternative="greater")$p.value
-        }
-    } 
+    return(results)
 }
 
 
@@ -231,7 +224,8 @@ dnms.coding = merge(dnms.coding, site_results, by="key", all.x=TRUE)
 # get the minimum alternate allele count from the parents
 dnms.coding$min.parent.ALT = apply(data.frame(dnms.coding$mother.ALT.F + dnms.coding$mother.ALT.R, dnms.coding$father.ALT.F + dnms.coding$father.ALT.R), 1, min)
 
-
+gene_results = test_genes(dnms.coding)
+dnms.coding = merge(dnms.coding, gene_results, by="symbol", all.x=TRUE)
 
 
 
@@ -241,36 +235,35 @@ dnms.coding$min.parent.ALT = apply(data.frame(dnms.coding$mother.ALT.F + dnms.co
 #   (ii) site-specific PA < threshold, 
 #   (iii) gene-specific PA < threshold, if > 1 sites called in gene
 
-overall.pass = rep("PASS", nrow(dnms.coding.all)) # store overall PASS status
-PA.gene.pass = rep("PASS", nrow(dnms.coding.all)) # store intermediate PA gene PASS status
-PA.pass = rep("PASS", nrow(dnms.coding.all)) # store intermediate PA PASS status
+overall.pass = rep("PASS", nrow(dnms.coding)) # store overall PASS status
+PA.gene.pass = rep("PASS", nrow(dnms.coding)) # store intermediate PA gene PASS status
+PA.pass = rep("PASS", nrow(dnms.coding)) # store intermediate PA PASS status
 
 # fail SNVs with SB
-overall.pass[dnms.coding.all$SB_pval < SB.filt & dnms.coding.all$var_type == "DENOVO-SNP"] = "FAIL"
+overall.pass[dnms.coding$SB_pval < SB.filt & dnms.coding$var_type == "DENOVO-SNP"] = "FAIL"
 
 # fail sites with gene-specific PA, only if >1 sites called per gene
 # NEED TO ADAPT TO AVOID SITES WITHOUT GENE SYMBOL ANNOTATED BEING REGARDED AS BEING IN THE SAME GENE
-PA.gene.pass[dnms.coding.all$PA_pval_gene < SB.filt & dnms.coding.all$count.genes > 1] = "FAIL"
+PA.gene.pass[dnms.coding$PA_pval_gene < SB.filt & dnms.coding$count.genes > 1] = "FAIL"
 
 # fail sites with PA, any two of three classes
-PA.pass[PA.gene.pass == "FAIL" & dnms.coding.all$PA_pval < SB.filt] = "FAIL"
-PA.pass[PA.gene.pass == "FAIL" & dnms.coding.all$min.parent.ALT > 0] = "FAIL"
-PA.pass[dnms.coding.all$PA_pval < SB.filt & dnms.coding.all$min.parent.ALT > 0] = "FAIL"
+PA = data.frame((PA.gene.pass == "FAIL"), (dnms.coding$PA_pval < SB.filt), (dnms.coding$min.parent.ALT > 0))
+PA.pass[apply(PA, 1, sum) >= 2] = "FAIL"
 
 # fail sites with PA
 overall.pass[PA.pass == "FAIL"] = "FAIL"
 
 #table(overall.pass)
 
-#table(overall.pass, dnms.coding.all[, 41])
+#table(overall.pass, dnms.coding[, 41])
 
 
-dnms.coding.all = cbind(dnms.coding.all, overall.pass)
+dnms.coding$overall.pass = overall.pass
 
 
 # write out
 
-write.table(dnms.coding.all, file="~/Desktop/dnms.coding.all.txt", quote=F, row.names=F, sep="\t")
+write.table(dnms.coding, file="~/Desktop/dnms.coding.all.txt", quote=F, row.names=F, sep="\t")
 
 
 
