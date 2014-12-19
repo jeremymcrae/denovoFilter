@@ -316,7 +316,8 @@ main <- function() {
     
     de_novos = set_filter_flag(de_novos)
     coding_passed = de_novos[de_novos$overall.pass == "PASS" & de_novos$coding, ]
-    write.table(coding_passed, file="~/ddd_de_novos.passed_and_coding.txt", 
+    coding_passed = get_independent_de_novos(de_novos)
+    write.table(coding_passed, file="~/ddd_de_novos.passed_coding_and_independent.txt", 
         quote=FALSE, row.names=FALSE, sep="\t")
 }
 

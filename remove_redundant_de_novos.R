@@ -16,15 +16,16 @@ open_ddd_families <- function(path) {
 }
 
 #' remove de novos that are shared between multiple probands of a family
-get_independent_de_novos <- function(de_novos)
+get_independent_de_novos <- function(de_novos) {
     families = open_ddd_families(TRIOS_PATH)
     
     # merge the family IDs with the de novo events, sort the de novos first, so
     # that we can correctly match to the duplicate status
-    de_novos = de_novos[order(de_novos$person_id), ]
     if ("person_stable_id" %in% names(de_novos)) {
+        de_novos = de_novos[order(de_novos$person_stable_id), ]
         dups = merge(de_novos, families, by.x="person_stable_id", by.y="individual_id", all.x=TRUE)
     } else {
+        de_novos = de_novos[order(de_novos$person_id), ]
         dups = merge(de_novos, families, by.x="person_id", by.y="individual_id", all.x=TRUE)
     }
     
