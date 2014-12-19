@@ -1,5 +1,7 @@
 # filter DNG callset initially on basis of
 
+library(mupit)
+
 # - in_child_vcf, not in parent vcf
 # - max_af<0.01
 # - remove dodgy samples with too many DNM calls
@@ -64,18 +66,52 @@ preliminary_filtering <- function(dnms) {
     return(dnms)
 }
 
+#' adds gene symbols to variants lacking them, using a mupit function
+fix_missing_gene_symbols <- function(dnms) {
+    
+    # get the variants with no gene annotation, ensure chrom, start and stop
+    # positions columns exist
+    missing_genes = dnms[dnms$symbol == "", ]
+    missing_genes$start_pos = missing_genes$pos
+    missing_genes$end_pos = missing_genes$start_pos + (nchar(missing_genes$ref) - 1)
+    
+    # find the HGNC symbols (if any) for the variants
+    hgnc_symbols = apply(missing_genes, 1, get_gene_id_for_variant, verbose=TRUE)
+    
+    # add the HGNC symbols to the rows that need it
+    dnms$symbol[dnms$symbol == ""] = hgnc_symbols
+    
+    # 360 out of 17000 de novos still lack HGNC symbols. Their consequences are:
+    # 
+    #   consequence                count
+    #   ========================   =====
+    #   downstream_gene_variant      17
+    #   intergenic_variant          259
+    #   regulatory_region_variant    63
+    #   upstream_gene_variant        27
+    # 
+    # In spot checks, these are sufficiently distant from genes that we can't
+    # add them to the analysis of their nearest gene. We shall analyse these
+    # per site by giving them mock gene symbols.
+    missing_genes = dnms[dnms$symbol == "", ]
+    dnms$symbol[dnms$symbol == ""] = paste("fake_symbol.", missing_genes$chrom, "_", missing_genes$pos, sep="")
+    
+    return(dnms)
+}
+
 
 #' annotate with presence in DNG monoallelic/XL genes
 #' NEED TO UPDATE FOR MOST RECENT DDG2P
 annotate_with_ddg2p <- function(dnms) {
+    
     ddg2p = read.table(ddg2p_path, header=TRUE, sep="\t", stringsAsFactors=FALSE)
     
     # find the dominantly inherited genes
     allelic = c("Monoallelic", "Hemizygous", "X-linked dominant", "Both")
-    mono.xl.ddg2p = ddg2p[ddg2p$Allelic_requirement %in% allelic, ]
-    mono.xl.dd.genes = unique(mono.xl.ddg2p$GeneSymbol)
+    dominant_genes = ddg2p[ddg2p$Allelic_requirement %in% allelic, ]
+    dominant_symbols = unique(dominant_genes$ddg2p_gene_name)
     
-    dnms$dnms.mono.xl.ddg2p = dnms$symbol %in% mono.xl.dd.genes
+    dnms$in_dominant_ddg2p = dnms$symbol %in% dominant_symbols
     
     return(dnms)
 }
@@ -194,6 +230,10 @@ test_sites <- function(dnms) {
 
 #' tests each gene for deviation from expected behaviour
 test_genes <-function(dnms) {
+    
+    dnms = de_novos
+    stopifnot("PA_pval_site" %in% names(dnms))
+    
     # exclude de novo SNVs that fail the strand bias filter, otherwise these 
     # skew the parental alts within genes
     alleles = dnms[!(dnms$SB_pval < p_cutoff & dnms$var_type == "DENOVO-SNP"), ]
@@ -233,7 +273,6 @@ set_filter_flag <- function(de_novos) {
     de_novos$overall.pass[de_novos$SB_pval < p_cutoff & de_novos$var_type == "DENOVO-SNP"] = "FAIL"
     
     # fail sites with gene-specific parental alts, only if >1 sites called per gene
-    # NEED TO ADAPT TO AVOID SITES WITHOUT GENE SYMBOL ANNOTATED BEING REGARDED AS BEING IN THE SAME GENE
     gene_fail = de_novos$PA_pval_gene < p_cutoff & de_novos$count.genes > 1
     site_fail = de_novos$PA_pval_site < p_cutoff
     excess_alts = de_novos$min.parent.ALT > 0
@@ -245,6 +284,11 @@ set_filter_flag <- function(de_novos) {
     # fail sites with excess parental alt reads
     de_novos$overall.pass[parental_alts_fail] = "FAIL"
     
+    de_novos = subset(de_novos, select=c("person_stable_id", "gender",
+        "mother_stable_id", "father_stable_id", "chrom", "pos", "ref", "alt",
+        "symbol", "var_type", "consequence", "ensg", "enst", "max_af", "pp_dnm",
+        "child_alt_prp", "in_dominant_ddg2p", "coding", "overall.pass"))
+    
     return(de_novos)
 }
 
@@ -253,6 +297,7 @@ main <- function() {
     de_novos = read.table(de_novos_path, header=TRUE, sep="\t", stringsAsFactors=FALSE)
     
     de_novos = preliminary_filtering(de_novos)
+    de_novos = fix_missing_gene_symbols(de_novos)
     de_novos = annotate_with_ddg2p(de_novos)
     de_novos = extract_alt_and_ref_counts(de_novos)
     de_novos = count_site_and_gene_recurrence(de_novos)
@@ -264,14 +309,14 @@ main <- function() {
     alts = data.frame(de_novos$mother.ALT.F + de_novos$mother.ALT.R, de_novos$father.ALT.F + de_novos$father.ALT.R)
     de_novos$min.parent.ALT = apply(alts, 1, min)
     
+    # test whether any genes have an excess of parental alts
     gene_results = test_genes(de_novos)
     de_novos = merge(de_novos, gene_results, by="symbol", all.x=TRUE)
     
     de_novos = set_filter_flag(de_novos)
-    
-    a = de_novos[de_novos$overall.pass == "PASS" & de_novos$coding == TRUE, ]
-    
-    write.table(de_novos, file="~/de_novos.all.2.txt", quote=F, row.names=F, sep="\t")
+    coding_passed = de_novos[de_novos$overall.pass == "PASS" & de_novos$coding, ]
+    write.table(coding_passed, file="~/ddd_de_novos.passed_and_coding.txt", 
+        quote=FALSE, row.names=FALSE, sep="\t")
 }
 
 
