@@ -284,6 +284,7 @@ set_filter_flag <- function(de_novos) {
     # fail sites with excess parental alt reads
     de_novos$overall.pass[parental_alts_fail] = "FAIL"
     
+    # subset down to specific columns
     de_novos = subset(de_novos, select=c("person_stable_id", "gender",
         "mother_stable_id", "father_stable_id", "chrom", "pos", "ref", "alt",
         "symbol", "var_type", "consequence", "ensg", "enst", "max_af", "pp_dnm",
