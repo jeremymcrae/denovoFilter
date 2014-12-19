@@ -130,21 +130,28 @@ count_site_and_gene_recurrence <- function(dnms) {
 }
 
 #' counts REF and ALT alleles in reads for de novo events at a single site
-#'
-#' We 
-get_allele_counts <- function(variant) {
+get_allele_counts <- function(site_vars) {
     
-    REF.F = sum(variant[, c("child.REF.F", "mother.REF.F", "father.REF.F")])
-    REF.R = sum(variant[, c("child.REF.R", "mother.REF.R", "father.REF.R")])
-    ALT.F = sum(variant[, c("child.ALT.F", "mother.ALT.F", "father.ALT.F")])
-    ALT.R = sum(variant[, c("child.ALT.R", "mother.ALT.R", "father.ALT.R")])
+    REF.F = sum(site_vars[, c("child.REF.F", "mother.REF.F", "father.REF.F")])
+    REF.R = sum(site_vars[, c("child.REF.R", "mother.REF.R", "father.REF.R")])
+    ALT.F = sum(site_vars[, c("child.ALT.F", "mother.ALT.F", "father.ALT.F")])
+    ALT.R = sum(site_vars[, c("child.ALT.R", "mother.ALT.R", "father.ALT.R")])
     
     # count parental alt and ref
-    parent.ALT = sum(variant[, c("mother.ALT.F", "father.ALT.F", "mother.ALT.R", "father.ALT.R")])
-    parent.REF = sum(variant[, c("mother.REF.F", "father.REF.F", "mother.REF.R", "father.REF.R")])
+    parent.ALT = sum(site_vars[, c("mother.ALT.F", "father.ALT.F", "mother.ALT.R", "father.ALT.R")])
+    parent.REF = sum(site_vars[, c("mother.REF.F", "father.REF.F", "mother.REF.R", "father.REF.R")])
     
     return(list(REF.F=REF.F, REF.R=REF.R, ALT.F=ALT.F, ALT.R=ALT.R, 
         parent.ALT=parent.ALT, parent.REF=parent.REF))
+}
+
+#' counts REF and ALT alleles in reads for de novo events within a single gene
+get_parental_counts <- function(gene_vars) {
+    
+    parent.ALT = sum(gene_vars[, c("mother.ALT.F", "father.ALT.F", "mother.ALT.R", "father.ALT.R")])
+    parent.REF = sum(gene_vars[, c("mother.REF.F", "father.REF.F", "mother.REF.R", "father.REF.R")])
+    
+    return(list(parent.ALT=parent.ALT, parent.REF=parent.REF))
 }
 
 #' checks for strand bias per de novo site using the ref and alt counts
@@ -161,50 +168,50 @@ test_sites <- function(dnms) {
         "mother.REF.F", "mother.REF.R", "mother.ALT.F", "mother.ALT.R",
         "father.REF.F", "father.REF.R", "father.ALT.F", "father.ALT.R"))
     
+    cat("splitting by site\n")
     variants = split(alleles, alleles$key)
     
     # count the ref and alt alleles for each de novo site
+    cat("counting alleles\n")
     counts = lapply(variants, get_allele_counts)
     results = data.frame(matrix(unlist(counts), ncol=length(counts[[1]]), byrow=TRUE))
     names(results) = names(counts[[1]])
     results$key = names(counts)
     
-    # run a binomial test of the number of parental alts
+    # check for overabundance of parental alt alleles using binomial test
+    cat("testing parental alt overabundance\n")
     parent_counts = data.frame(results$parent.ALT, (results$parent.ALT + results$parent.REF))
     PA_pval = apply(parent_counts, 1, binom.test, p=error.rate, alternative="greater")
     results$PA_pval = as.numeric(sapply(PA_pval, "[", "p.value"))
     
     # check for strand bias by fishers exact test on the allele counts
+    cat("testing strand bias\n")
     allele_counts = lapply(split(results, seq_along(results[, 1])), as.list)
     results$SB_pval = sapply(allele_counts, site_strand_bias)
     
     return(results)
 }
 
-get_parental_counts <- function(vars) {
-    
-    parent.ALT = sum(vars[, c("mother.ALT.F", "father.ALT.F", "mother.ALT.R", "father.ALT.R")])
-    parent.REF = sum(vars[, c("mother.REF.F", "father.REF.F", "mother.REF.R", "father.REF.R")])
-    
-    return(list(parent.ALT=parent.ALT, parent.REF=parent.REF))
-}
-
+#' tests each gene for deviation from expected behaviour
 test_genes <-function(dnms) {
+    # exclude de novo SNVs that fail the strand bias filter, otherwise these 
+    # skew the parental alts within genes
+    alleles = dnms[!(dnms$SB_pval < SB.filt & dnms$var_type == "DENOVO-SNP"), ]
+    
     # loop to calculate gene-specific PA values after SB filtering
-    alleles = subset(dnms, select=c("key", 
-        "symbol", "SB_pval", "var_type",
+    alleles = subset(alleles, select=c("key", "symbol", 
         "mother.REF.F", "mother.REF.R", "mother.ALT.F", "mother.ALT.R",
         "father.REF.F", "father.REF.R", "father.ALT.F", "father.ALT.R"))
     
-    # exclude indels, and de novo events that fail the strand bias filter
-    alleles = alleles[!(alleles$SB_pval < SB.filt & alleles$var_type == "DENOVO-SNP"), ]
-    
+    # count the number of parental alleles within genes, and restructure data
+    # for testing
     genes = split(alleles, alleles$symbol)
     counts = lapply(genes, get_parental_counts)
     results = data.frame(matrix(unlist(counts), ncol=length(counts[[1]]), byrow=TRUE))
     names(results) = names(counts[[1]])
     results$symbol = names(counts)
     
+    # check for overabundance of parental alt alleles using binomial test
     parent_counts = data.frame(results$parent.ALT, (results$parent.ALT + results$parent.REF))
     PA_pval = apply(parent_counts, 1, binom.test, p=error.rate, alternative="greater")
     results$PA_pval_gene = as.numeric(sapply(PA_pval, "[", "p.value"))
@@ -231,9 +238,9 @@ dnms.coding = merge(dnms.coding, gene_results, by="symbol", all.x=TRUE)
 
 
 # set flags for filtering, fail samples with SB < threshold, or any 2 of 
-#   (i) both parents have ALTs 
-#   (ii) site-specific PA < threshold, 
-#   (iii) gene-specific PA < threshold, if > 1 sites called in gene
+#  (i) both parents have ALTs 
+#  (ii) site-specific PA < threshold, 
+#  (iii) gene-specific PA < threshold, if > 1 sites called in gene
 
 overall.pass = rep("PASS", nrow(dnms.coding)) # store overall PASS status
 PA.gene.pass = rep("PASS", nrow(dnms.coding)) # store intermediate PA gene PASS status
