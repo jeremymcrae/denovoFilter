@@ -3,7 +3,7 @@
 library(mupit)
 
 # - in_child_vcf, not in parent vcf
-# - max_af<0.01
+# - max_af < 0.01
 # - remove dodgy samples with too many DNM calls
 
 # annotate DNG callset
@@ -166,28 +166,26 @@ count_site_and_gene_recurrence <- function(dnms) {
 }
 
 #' counts REF and ALT alleles in reads for de novo events at a single site
-get_allele_counts <- function(site_vars) {
-    
-    REF.F = sum(site_vars[, c("child.REF.F", "mother.REF.F", "father.REF.F")])
-    REF.R = sum(site_vars[, c("child.REF.R", "mother.REF.R", "father.REF.R")])
-    ALT.F = sum(site_vars[, c("child.ALT.F", "mother.ALT.F", "father.ALT.F")])
-    ALT.R = sum(site_vars[, c("child.ALT.R", "mother.ALT.R", "father.ALT.R")])
+get_allele_counts <- function(vars, gene=FALSE) {
     
     # count parental alt and ref
-    parent.ALT = sum(site_vars[, c("mother.ALT.F", "father.ALT.F", "mother.ALT.R", "father.ALT.R")])
-    parent.REF = sum(site_vars[, c("mother.REF.F", "father.REF.F", "mother.REF.R", "father.REF.R")])
+    parent.ALT = sum(vars[, c("mother.ALT.F", "father.ALT.F", "mother.ALT.R", "father.ALT.R")])
+    parent.REF = sum(vars[, c("mother.REF.F", "father.REF.F", "mother.REF.R", "father.REF.R")])
+    values = list()
     
-    return(list(REF.F=REF.F, REF.R=REF.R, ALT.F=ALT.F, ALT.R=ALT.R, 
-        parent.ALT=parent.ALT, parent.REF=parent.REF))
-}
-
-#' counts REF and ALT alleles in reads for de novo events within a single gene
-get_parental_counts <- function(gene_vars) {
+    if (!gene) {
+        values$REF.F = sum(vars[, c("child.REF.F", "mother.REF.F", "father.REF.F")])
+        values$REF.R = sum(vars[, c("child.REF.R", "mother.REF.R", "father.REF.R")])
+        values$ALT.F = sum(vars[, c("child.ALT.F", "mother.ALT.F", "father.ALT.F")])
+        values$ALT.R = sum(vars[, c("child.ALT.R", "mother.ALT.R", "father.ALT.R")])
+        values$parent.ALT = parent.ALT
+        values$parent.REF = parent.REF
+    } else {
+        values$gene.ALT = parent.ALT
+        values$gene.REF = parent.REF
+    }
     
-    parent.ALT = sum(gene_vars[, c("mother.ALT.F", "father.ALT.F", "mother.ALT.R", "father.ALT.R")])
-    parent.REF = sum(gene_vars[, c("mother.REF.F", "father.REF.F", "mother.REF.R", "father.REF.R")])
-    
-    return(list(gene.ALT=parent.ALT, gene.REF=parent.REF))
+    return(values)
 }
 
 #' checks for strand bias per de novo site using the ref and alt counts
@@ -231,7 +229,6 @@ test_sites <- function(dnms) {
 #' tests each gene for deviation from expected behaviour
 test_genes <-function(dnms) {
     
-    dnms = de_novos
     stopifnot("PA_pval_site" %in% names(dnms))
     
     # exclude de novo SNVs that fail the strand bias filter, otherwise these 
@@ -247,7 +244,7 @@ test_genes <-function(dnms) {
     # for testing
     cat("counting alleles per gene\n")
     genes = split(alleles, alleles$symbol)
-    counts = lapply(genes, get_parental_counts)
+    counts = lapply(genes, get_allele_counts, gene=TRUE)
     results = data.frame(matrix(unlist(counts), ncol=length(counts[[1]]), byrow=TRUE))
     names(results) = names(counts[[1]])
     results$symbol = names(counts)
@@ -317,7 +314,7 @@ main <- function() {
     de_novos = set_filter_flag(de_novos)
     coding_passed = de_novos[de_novos$overall.pass == "PASS" & de_novos$coding, ]
     coding_passed = get_independent_de_novos(de_novos)
-    write.table(coding_passed, file="~/ddd_de_novos.passed_coding_and_independent.txt", 
+    write.table(coding_passed, file="~/de_novos.ddd.ddd_only.txt", 
         quote=FALSE, row.names=FALSE, sep="\t")
 }
 
