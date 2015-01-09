@@ -151,7 +151,7 @@ extract_alt_and_ref_counts <- function(dnms) {
     return(dnms)
 }
 
-#'' count of number of times that site is called
+#' count of number of times that site is called
 count_site_and_gene_recurrence <- function(dnms) {
     
     dnms$key = paste(dnms$chrom, dnms$pos, dnms$alt, sep="_")
@@ -314,6 +314,7 @@ main <- function() {
     de_novos = set_filter_flag(de_novos)
     coding_passed = de_novos[de_novos$overall.pass == "PASS" & de_novos$coding, ]
     coding_passed = get_independent_de_novos(de_novos)
+    
     write.table(coding_passed, file="~/de_novos.ddd.ddd_only.txt", 
         quote=FALSE, row.names=FALSE, sep="\t")
 }
