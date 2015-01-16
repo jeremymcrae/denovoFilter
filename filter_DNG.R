@@ -17,15 +17,15 @@ library(mupit)
 ddg2p_path = "/lustre/scratch113/projects/ddd/resources/ddd_data_releases/2014-11-04/DDG2P/DDG2P_freeze_with_gencode19_genomic_coordinates_20141118_fixed.txt"
 de_novos_path = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2014-11-04/denovo_gear_trios_extracted_passed_variants_18.12.14.tsv"
 
-# estimated error rate at 0.0012 from DNM calls in parents in DDG2P genes, set 
+# estimated error rate at 0.0012 from DNM calls in parents in DDG2P genes, set
 # slightly higher to be conservative
-error.rate = 0.002 
+error.rate = 0.002
 
 # threshold for removing sites with high strand bias, or parental alt frequency
-p_cutoff = 1e-3 
+p_cutoff = 1e-3
 
 #' run some preliminary filtering of de novos
-#' 
+#'
 #' We want to filter out de novos with high MAF, where they are not present in
 #' the child VCF, or are present in the parental VCFs
 preliminary_filtering <- function(dnms) {
@@ -43,7 +43,7 @@ preliminary_filtering <- function(dnms) {
     # filter on max_af (leaves 23490)
     dnms = dnms[dnms$max_af < 0.01 & !is.na(dnms$max_af), ]
     
-    # remove dnms in samples with >> too many DNMs, focus on too many DNMs at 
+    # remove dnms in samples with >> too many DNMs, focus on too many DNMs at
     # high quality (leaves 17794)
     # NEED TO UPDATE WITH CAROLINE'S NEW SAMPLE FILE LIST, OR USE PRE-FILTERED SET OF DNMS
     sample.fails = c("276227", "258876", "273778", "258921", "272110", "260337",
@@ -51,10 +51,11 @@ preliminary_filtering <- function(dnms) {
     dnms = dnms[!dnms$decipher_id %in% sample.fails, ]
     
     # Annotate dnms hitting coding exons or splice sites
-    coding_splicing = c("frameshift_variant", "inframe_deletion", 
-        "inframe_insertion", "initiator_codon_variant", "missense_variant",  
-        "splice_acceptor_variant", "splice_donor_variant", "stop_gained", 
-        "stop_lost", "synonymous_variant")
+    coding_splicing = c("frameshift_variant", "inframe_deletion",
+        "inframe_insertion", "initiator_codon_variant", "missense_variant",
+        "splice_acceptor_variant", "splice_donor_variant", "splice_region_variant",
+        "stop_gained", "stop_lost", "synonymous_variant")
+        
     dnms$coding = dnms$consequence %in% coding_splicing
     
     # filtering down to coding (leaves 9057)
@@ -72,8 +73,8 @@ fix_missing_gene_symbols <- function(dnms) {
     # get the variants with no gene annotation, ensure chrom, start and stop
     # positions columns exist
     missing_genes = dnms[dnms$symbol == "", ]
-    missing_genes$start_pos = missing_genes$pos
-    missing_genes$end_pos = missing_genes$start_pos + (nchar(missing_genes$ref) - 1)
+    missing_genes$start_pos = as.character(missing_genes$pos)
+    missing_genes$end_pos = as.character(missing_genes$start_pos + (nchar(missing_genes$ref) - 1))
     
     # find the HGNC symbols (if any) for the variants
     hgnc_symbols = apply(missing_genes, 1, get_gene_id_for_variant, verbose=TRUE)
@@ -82,14 +83,14 @@ fix_missing_gene_symbols <- function(dnms) {
     dnms$symbol[dnms$symbol == ""] = hgnc_symbols
     
     # 360 out of 17000 de novos still lack HGNC symbols. Their consequences are:
-    # 
+    #
     #   consequence                count
     #   ========================   =====
     #   downstream_gene_variant      17
     #   intergenic_variant          259
     #   regulatory_region_variant    63
     #   upstream_gene_variant        27
-    # 
+    #
     # In spot checks, these are sufficiently distant from genes that we can't
     # add them to the analysis of their nearest gene. We shall analyse these
     # per site by giving them mock gene symbols.
@@ -101,7 +102,6 @@ fix_missing_gene_symbols <- function(dnms) {
 
 
 #' annotate with presence in DNG monoallelic/XL genes
-#' NEED TO UPDATE FOR MOST RECENT DDG2P
 annotate_with_ddg2p <- function(dnms) {
     
     ddg2p = read.table(ddg2p_path, header=TRUE, sep="\t", stringsAsFactors=FALSE)
@@ -116,7 +116,7 @@ annotate_with_ddg2p <- function(dnms) {
     return(dnms)
 }
 
-#' extract ALT and REF counts of forward and reverse reads for the members of 
+#' extract ALT and REF counts of forward and reverse reads for the members of
 #' each trio
 extract_alt_and_ref_counts <- function(dnms) {
     
@@ -197,7 +197,7 @@ site_strand_bias <- function(site) {
 
 #' tests each site for deviation from expected behaviour
 test_sites <- function(dnms) {
-    alleles = subset(dnms, select=c("key", 
+    alleles = subset(dnms, select=c("key",
         "child.REF.F", "child.REF.R", "child.ALT.F", "child.ALT.R",
         "mother.REF.F", "mother.REF.R", "mother.ALT.F", "mother.ALT.R",
         "father.REF.F", "father.REF.R", "father.ALT.F", "father.ALT.R"))
@@ -231,12 +231,12 @@ test_genes <-function(dnms) {
     
     stopifnot("PA_pval_site" %in% names(dnms))
     
-    # exclude de novo SNVs that fail the strand bias filter, otherwise these 
+    # exclude de novo SNVs that fail the strand bias filter, otherwise these
     # skew the parental alts within genes
     alleles = dnms[!(dnms$SB_pval < p_cutoff & dnms$var_type == "DENOVO-SNP"), ]
     
     # loop to calculate gene-specific PA values after SB filtering
-    alleles = subset(alleles, select=c("key", "symbol", 
+    alleles = subset(alleles, select=c("key", "symbol",
         "mother.REF.F", "mother.REF.R", "mother.ALT.F", "mother.ALT.R",
         "father.REF.F", "father.REF.R", "father.ALT.F", "father.ALT.R"))
     
@@ -258,9 +258,9 @@ test_genes <-function(dnms) {
     return(results)
 }
 
-#' set flags for filtering, fail samples with strand bias < threshold, or any 2 of 
-#'  (i) both parents have ALTs 
-#'  (ii) site-specific parental alts < threshold, 
+#' set flags for filtering, fail samples with strand bias < threshold, or any 2 of
+#'  (i) both parents have ALTs
+#'  (ii) site-specific parental alts < threshold,
 #'  (iii) gene-specific parental alts < threshold, if > 1 sites called in gene
 set_filter_flag <- function(de_novos) {
     
@@ -313,12 +313,11 @@ main <- function() {
     
     de_novos = set_filter_flag(de_novos)
     coding_passed = de_novos[de_novos$overall.pass == "PASS" & de_novos$coding, ]
-    coding_passed = get_independent_de_novos(de_novos)
+    coding_passed = get_independent_de_novos(coding_passed)
     
-    write.table(coding_passed, file="~/de_novos.ddd.ddd_only.txt", 
+    write.table(coding_passed, file="~/de_novos.ddd_4k.ddd_only.txt",
         quote=FALSE, row.names=FALSE, sep="\t")
 }
 
 
 main()
-
