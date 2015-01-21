@@ -74,7 +74,7 @@ fix_missing_gene_symbols <- function(dnms) {
     # positions columns exist
     missing_genes = dnms[dnms$symbol == "", ]
     missing_genes$start_pos = as.character(missing_genes$pos)
-    missing_genes$end_pos = as.character(missing_genes$start_pos + (nchar(missing_genes$ref) - 1))
+    missing_genes$end_pos = as.character(as.numeric(missing_genes$start_pos) + (nchar(missing_genes$ref) - 1))
     
     # find the HGNC symbols (if any) for the variants
     hgnc_symbols = apply(missing_genes, 1, get_gene_id_for_variant, verbose=TRUE)
