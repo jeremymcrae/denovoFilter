@@ -14,21 +14,18 @@ library(mupit)
 # - with site-specific strand bias (SB) and parental alt (PA) frequency p values against null
 # - with gene-specific parental alt (PA) frequency, after removal of SB filtered sites
 
-ddg2p_path = "/lustre/scratch113/projects/ddd/resources/ddd_data_releases/2014-11-04/DDG2P/DDG2P_freeze_with_gencode19_genomic_coordinates_20141118_fixed.txt"
-de_novos_path = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2014-11-04/denovo_gear_trios_extracted_passed_variants_18.12.14.tsv"
+DDG2P_PATH = "/lustre/scratch113/projects/ddd/resources/ddd_data_releases/2014-11-04/DDG2P/DDG2P_freeze_with_gencode19_genomic_coordinates_20141118_fixed.txt"
+DE_NOVOS_PATH = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2014-11-04/denovo_gear_trios_extracted_passed_variants_18.12.14.tsv"
 
 # estimated error rate at 0.0012 from DNM calls in parents in DDG2P genes, set
 # slightly higher to be conservative
-error.rate = 0.002
+ERROR_RATE = 0.002
 
 # threshold for removing sites with high strand bias, or parental alt frequency
-p_cutoff = 1e-3
+P_CUTOFF = 1e-3
 
-#' run some preliminary filtering of de novos
-#'
-#' We want to filter out de novos with high MAF, where they are not present in
-#' the child VCF, or are present in the parental VCFs
-preliminary_filtering <- function(dnms) {
+#' fix a few MAF values that are clank, or have liusts of MAF values
+fix_maf <- function(dnms) {
     # annotate with numeric max allele freq
     # fix the blank and null max AF values
     dnms$max_af[dnms$max_af == "" | dnms$max_af == "."] = 0
@@ -36,6 +33,16 @@ preliminary_filtering <- function(dnms) {
     # one de novo has a comma separated list of MAF values (both above 0.1)
     dnms$max_af[grepl(",", dnms$max_af)] = NA
     dnms$max_af = as.numeric(dnms$max_af)
+    
+    return(dnms)
+}
+
+#' run some preliminary filtering of de novos
+#'
+#' We want to filter out de novos with high MAF, where they are not present in
+#' the child VCF, or are present in the parental VCFs
+preliminary_filtering <- function(dnms) {
+    dnms = fix_maf(dnms)
     
     # keep sites in child vcf not in parental vcfs (leaves 123919)
     dnms = dnms[dnms$in_child_vcf == 1 & dnms$in_father_vcf == 0 & dnms$in_mother_vcf == 0, ]
@@ -104,7 +111,7 @@ fix_missing_gene_symbols <- function(dnms) {
 #' annotate with presence in DNG monoallelic/XL genes
 annotate_with_ddg2p <- function(dnms) {
     
-    ddg2p = read.table(ddg2p_path, header=TRUE, sep="\t", stringsAsFactors=FALSE)
+    ddg2p = read.table(DDG2P_PATH, header=TRUE, sep="\t", stringsAsFactors=FALSE)
     
     # find the dominantly inherited genes
     allelic = c("Monoallelic", "Hemizygous", "X-linked dominant", "Both")
@@ -215,7 +222,7 @@ test_sites <- function(dnms) {
     # check for overabundance of parental alt alleles using binomial test
     cat("testing parental alt overabundance\n")
     parent_counts = data.frame(results$parent.ALT, (results$parent.ALT + results$parent.REF))
-    PA_pval_site = apply(parent_counts, 1, binom.test, p=error.rate, alternative="greater")
+    PA_pval_site = apply(parent_counts, 1, binom.test, p=ERROR_RATE, alternative="greater")
     results$PA_pval_site = as.numeric(sapply(PA_pval_site, "[", "p.value"))
     
     # check for strand bias by fishers exact test on the allele counts
@@ -233,7 +240,7 @@ test_genes <-function(dnms) {
     
     # exclude de novo SNVs that fail the strand bias filter, otherwise these
     # skew the parental alts within genes
-    alleles = dnms[!(dnms$SB_pval < p_cutoff & dnms$var_type == "DENOVO-SNP"), ]
+    alleles = dnms[!(dnms$SB_pval < P_CUTOFF & dnms$var_type == "DENOVO-SNP"), ]
     
     # loop to calculate gene-specific PA values after SB filtering
     alleles = subset(alleles, select=c("key", "symbol",
@@ -252,7 +259,7 @@ test_genes <-function(dnms) {
     # check for overabundance of parental alt alleles using binomial test
     cat("testing parental alt overabundance\n")
     parent_counts = data.frame(results$gene.ALT, (results$gene.ALT + results$gene.REF))
-    PA_pval = apply(parent_counts, 1, binom.test, p=error.rate, alternative="greater")
+    PA_pval = apply(parent_counts, 1, binom.test, p=ERROR_RATE, alternative="greater")
     results$PA_pval_gene = as.numeric(sapply(PA_pval, "[", "p.value"))
     
     return(results)
@@ -262,37 +269,42 @@ test_genes <-function(dnms) {
 #'  (i) both parents have ALTs
 #'  (ii) site-specific parental alts < threshold,
 #'  (iii) gene-specific parental alts < threshold, if > 1 sites called in gene
-set_filter_flag <- function(de_novos) {
+set_filter_flag <- function(de_novos, keep_all=FALSE) {
     
     de_novos$overall.pass = "PASS"
     
     # fail SNVs with excessive strand bias
-    de_novos$overall.pass[de_novos$SB_pval < p_cutoff & de_novos$var_type == "DENOVO-SNP"] = "FAIL"
+    de_novos$overall.pass[de_novos$SB_pval < P_CUTOFF & de_novos$var_type == "DENOVO-SNP"] = "FAIL"
     
+    # find if each de novo has passed each of three different filtering strategies
     # fail sites with gene-specific parental alts, only if >1 sites called per gene
-    gene_fail = de_novos$PA_pval_gene < p_cutoff & de_novos$count.genes > 1
-    site_fail = de_novos$PA_pval_site < p_cutoff
+    gene_fail = de_novos$PA_pval_gene < P_CUTOFF & de_novos$count.genes > 1
+    site_fail = de_novos$PA_pval_site < P_CUTOFF
+    
+    # fail sites
     excess_alts = de_novos$min.parent.ALT > 0
     
     # fail sites with parental alts, any two of three classes
-    parental_alts = data.frame(gene_fail, site_fail, excess_alts)
-    parental_alts_fail = apply(parental_alts, 1, sum) >= 2
+    sites = data.frame(gene_fail, site_fail, excess_alts)
+    sites_fail = apply(sites, 1, sum) >= 2
     
     # fail sites with excess parental alt reads
-    de_novos$overall.pass[parental_alts_fail] = "FAIL"
+    de_novos$overall.pass[sites_fail] = "FAIL"
     
-    # subset down to specific columns
-    de_novos = subset(de_novos, select=c("person_stable_id", "gender",
-        "mother_stable_id", "father_stable_id", "chrom", "pos", "ref", "alt",
-        "symbol", "var_type", "consequence", "ensg", "enst", "max_af", "pp_dnm",
-        "child_alt_prp", "in_dominant_ddg2p", "coding", "overall.pass"))
+    if (!keep_all) {
+        # subset down to specific columns
+        de_novos = subset(de_novos, select=c("person_stable_id", "gender",
+            "mother_stable_id", "father_stable_id", "chrom", "pos", "ref", "alt",
+            "symbol", "var_type", "consequence", "ensg", "enst", "max_af", "pp_dnm",
+            "child_alt_prp", "in_dominant_ddg2p", "coding", "overall.pass"))
+    }
     
     return(de_novos)
 }
 
 
 main <- function() {
-    de_novos = read.table(de_novos_path, header=TRUE, sep="\t", stringsAsFactors=FALSE)
+    de_novos = read.table(DE_NOVOS_PATH, header=TRUE, sep="\t", stringsAsFactors=FALSE)
     
     de_novos = preliminary_filtering(de_novos)
     de_novos = fix_missing_gene_symbols(de_novos)
@@ -319,5 +331,7 @@ main <- function() {
         quote=FALSE, row.names=FALSE, sep="\t")
 }
 
-
-main()
+# R equivalent of "if main"
+if(getOption("run.main", default=TRUE)) {
+    main()
+}
