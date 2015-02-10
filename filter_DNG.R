@@ -13,9 +13,9 @@ library(mupit)
 # - with strand-specitic counts of REF and ALT reads
 # - with site-specific strand bias (SB) and parental alt (PA) frequency p values against null
 # - with gene-specific parental alt (PA) frequency, after removal of SB filtered sites
-
-DDG2P_PATH = "/lustre/scratch113/projects/ddd/resources/ddd_data_releases/2014-11-04/DDG2P/DDG2P_freeze_with_gencode19_genomic_coordinates_20141118_fixed.txt"
-DE_NOVOS_PATH = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2014-11-04/denovo_gear_trios_extracted_passed_variants_18.12.14.tsv"
+DATAFREEZE_DIR = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2014-11-04"
+DDG2P_PATH = file.path(DATAFREEZE_DIR, "DDG2P_freeze_with_gencode19_genomic_coordinates_20141118_fixed.txt")
+DE_NOVOS_PATH = file.path(DATAFREEZE_DIR, "denovo_gear_trios_extracted_passed_variants_18.12.14.tsv")
 
 # estimated error rate at 0.0012 from DNM calls in parents in DDG2P genes, set
 # slightly higher to be conservative
@@ -81,7 +81,8 @@ fix_missing_gene_symbols <- function(dnms) {
     # positions columns exist
     missing_genes = dnms[dnms$symbol == "", ]
     missing_genes$start_pos = as.character(missing_genes$pos)
-    missing_genes$end_pos = as.character(as.numeric(missing_genes$start_pos) + (nchar(missing_genes$ref) - 1))
+    missing_genes$end_pos = as.character(as.numeric(missing_genes$start_pos) + 
+        (nchar(missing_genes$ref) - 1))
     
     # find the HGNC symbols (if any) for the variants
     hgnc_symbols = apply(missing_genes, 1, get_gene_id_for_variant, verbose=TRUE)
@@ -102,7 +103,8 @@ fix_missing_gene_symbols <- function(dnms) {
     # add them to the analysis of their nearest gene. We shall analyse these
     # per site by giving them mock gene symbols.
     missing_genes = dnms[dnms$symbol == "", ]
-    dnms$symbol[dnms$symbol == ""] = paste("fake_symbol.", missing_genes$chrom, "_", missing_genes$pos, sep="")
+    dnms$symbol[dnms$symbol == ""] = paste("fake_symbol.",
+        missing_genes$chrom, "_", missing_genes$pos, sep="")
     
     return(dnms)
 }
@@ -296,7 +298,10 @@ set_filter_flag <- function(de_novos, keep_all=FALSE) {
         de_novos = subset(de_novos, select=c("person_stable_id", "gender",
             "mother_stable_id", "father_stable_id", "chrom", "pos", "ref", "alt",
             "symbol", "var_type", "consequence", "ensg", "enst", "max_af", "pp_dnm",
-            "child_alt_prp", "in_dominant_ddg2p", "coding", "overall.pass"))
+            "child_alt_prp", "in_dominant_ddg2p", "coding", "overall.pass",
+            "child.REF.F", "child.REF.R", "child.ALT.F", "child.ALT.R",
+            "mother.REF.F", "mother.REF.R", "mother.ALT.F", "mother.ALT.R",
+            "father.REF.F", "father.REF.R", "father.ALT.F", "father.ALT.R"))
     }
     
     return(de_novos)
@@ -316,7 +321,8 @@ main <- function() {
     de_novos = merge(de_novos, site_results, by="key", all.x=TRUE)
     
     # get the minimum alternate allele count from the parents
-    alts = data.frame(de_novos$mother.ALT.F + de_novos$mother.ALT.R, de_novos$father.ALT.F + de_novos$father.ALT.R)
+    alts = data.frame(de_novos$mother.ALT.F + de_novos$mother.ALT.R,
+        de_novos$father.ALT.F + de_novos$father.ALT.R)
     de_novos$min.parent.ALT = apply(alts, 1, min)
     
     # test whether any genes have an excess of parental alts
