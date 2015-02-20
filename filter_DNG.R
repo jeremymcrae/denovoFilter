@@ -15,7 +15,7 @@ library(mupit)
 # - with gene-specific parental alt (PA) frequency, after removal of SB filtered sites
 DATAFREEZE_DIR = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2014-11-04"
 DDG2P_PATH = file.path(DATAFREEZE_DIR, "DDG2P_freeze_with_gencode19_genomic_coordinates_20141118_fixed.txt")
-DE_NOVOS_PATH = file.path(DATAFREEZE_DIR, "denovo_gear_trios_extracted_passed_variants_18.12.14.tsv")
+DE_NOVOS_PATH = file.path(DATAFREEZE_DIR, "denovo_gear_trios_extracted_passed_variants_19.02.15.tsv")
 
 # estimated error rate at 0.0012 from DNM calls in parents in DDG2P genes, set
 # slightly higher to be conservative
@@ -81,7 +81,7 @@ fix_missing_gene_symbols <- function(dnms) {
     # positions columns exist
     missing_genes = dnms[dnms$symbol == "", ]
     missing_genes$start_pos = as.character(missing_genes$pos)
-    missing_genes$end_pos = as.character(as.numeric(missing_genes$start_pos) + 
+    missing_genes$end_pos = as.character(as.numeric(missing_genes$start_pos) +
         (nchar(missing_genes$ref) - 1))
     
     # find the HGNC symbols (if any) for the variants
