@@ -117,9 +117,9 @@ get_independent_de_novos <- function(de_novos) {
     
     # restrict ourselves to the non-duplicates (this retains the first de novo
     # for each family)
-    de_novos = de_novos[!duplicated(dups), ]
+    without_dups = de_novos[!duplicated(dups), ]
     
-    de_novos = remove_within_person_recurrences(de_novos)
+    without_recurrences = remove_within_person_recurrences(without_dups)
     
-    return(de_novos)
+    return(without_recurrences)
 }

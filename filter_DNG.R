@@ -330,10 +330,10 @@ main <- function() {
     de_novos = merge(de_novos, gene_results, by="symbol", all.x=TRUE)
     
     de_novos = set_filter_flag(de_novos)
-    coding_passed = de_novos[de_novos$overall.pass == "PASS" & de_novos$coding, ]
-    coding_passed = get_independent_de_novos(coding_passed)
+    passed = de_novos[de_novos$overall.pass == "PASS" & de_novos$coding, ]
+    passed = get_independent_de_novos(passed)
     
-    write.table(coding_passed, file="~/de_novos.ddd_4k.ddd_only.txt",
+    write.table(passed, file="~/de_novos.ddd_4k.ddd_only.txt",
         quote=FALSE, row.names=FALSE, sep="\t")
 }
 
