@@ -2,20 +2,8 @@
 
 library(mupit)
 
-# - in_child_vcf, not in parent vcf
-# - max_af < 0.01
-# - remove dodgy samples with too many DNM calls
-
-# annotate DNG callset
-
-# - with coding/splicing
-# - with presence in DDG2P
-# - with strand-specitic counts of REF and ALT reads
-# - with site-specific strand bias (SB) and parental alt (PA) frequency p values against null
-# - with gene-specific parental alt (PA) frequency, after removal of SB filtered sites
-DATAFREEZE_DIR = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2014-11-04"
-DDG2P_PATH = file.path(DATAFREEZE_DIR, "DDG2P_freeze_with_gencode19_genomic_coordinates_20141118_fixed.txt")
-DE_NOVOS_PATH = file.path(DATAFREEZE_DIR, "denovo_gear_trios_extracted_passed_variants_17.04.15.tsv")
+DATAFREEZE_DIR = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13"
+DE_NOVOS_PATH = file.path(DATAFREEZE_DIR, "denovo_gear_trios_extracted_passed_variants_11.05.15.tsv")
 
 # estimated error rate at 0.0012 from DNM calls in parents in DDG2P genes, set
 # slightly higher to be conservative
@@ -24,25 +12,39 @@ ERROR_RATE = 0.002
 # threshold for removing sites with high strand bias, or parental alt frequency
 P_CUTOFF = 1e-3
 
-#' fix a few MAF values that are clank, or have lists of MAF values
+#' fix a few MAF values that are blank, or have lists of MAF values
+#'
+#' @param de_novos dataframe of de novo variants
+#' @export
+#'
+#' @return vector of max allele frequency values for each site
 fix_maf <- function(de_novos) {
+    
     # annotate with numeric max allele freq
+    max_af = de_novos$max_af
+    
     # fix the blank and null max AF values
-    de_novos$max_af[de_novos$max_af == "" | de_novos$max_af == "."] = 0
+    max_af[max_af == "" | max_af == "."] = 0
     
     # one de novo has a comma separated list of MAF values (both above 0.1)
-    de_novos$max_af[grepl(",", de_novos$max_af)] = NA
-    de_novos$max_af = as.numeric(de_novos$max_af)
+    max_af[grepl(",", max_af)] = NA
+    max_af = as.numeric(max_af)
     
-    return(de_novos)
+    return(max_af)
 }
 
 #' run some preliminary filtering of de novos
 #'
 #' We want to filter out de novos with high MAF, where they are not present in
 #' the child VCF, or are present in the parental VCFs
+#'
+#' @param de_novos dataframe of de novo variants
+#' @export
+#'
+#' @return data frame of de novos, but where we have excluded sites with high
+#'         allele frequency and where the variant appears in one or more parents.
 preliminary_filtering <- function(de_novos) {
-    de_novos = fix_maf(de_novos)
+    de_novos$max_af = fix_maf(de_novos)
     
     # keep sites in child vcf, and not in parental vcfs
     de_novos = de_novos[de_novos$in_child_vcf == 1 & de_novos$in_father_vcf == 0 & de_novos$in_mother_vcf == 0, ]
@@ -70,6 +72,12 @@ preliminary_filtering <- function(de_novos) {
 }
 
 #' adds gene symbols to variants lacking them, using a mupit function
+#'
+#' @param de_novos dataframe of de novo variants
+#' @export
+#'
+#' @return data frame of de novos, but with additional annotations for many
+#'         variants previously lacking a HGNC symbol.
 fix_missing_gene_symbols <- function(de_novos) {
     
     # get the variants with no gene annotation, ensure chrom, start and stop
@@ -104,24 +112,14 @@ fix_missing_gene_symbols <- function(de_novos) {
     return(de_novos)
 }
 
-
-#' annotate with presence in DNG monoallelic/XL genes
-annotate_with_ddg2p <- function(de_novos) {
-    
-    ddg2p = read.table(DDG2P_PATH, header=TRUE, sep="\t", stringsAsFactors=FALSE)
-    
-    # find the dominantly inherited genes
-    allelic = c("Monoallelic", "Hemizygous", "X-linked dominant", "Both")
-    dominant_genes = ddg2p[ddg2p$Allelic_requirement %in% allelic, ]
-    dominant_symbols = unique(dominant_genes$ddg2p_gene_name)
-    
-    de_novos$in_dominant_ddg2p = de_novos$symbol %in% dominant_symbols
-    
-    return(de_novos)
-}
-
 #' extract ALT and REF counts of forward and reverse reads for the members of
 #' each trio
+#'
+#' @param de_novos dataframe of de novo variants
+#' @export
+#'
+#' @return data frame of de novos, but with an extra columns for the read
+#'         depths of forward and reverse reads for each member of the trio.
 extract_alt_and_ref_counts <- function(de_novos) {
     
     members = c("child", "father", "mother")
@@ -138,15 +136,24 @@ extract_alt_and_ref_counts <- function(de_novos) {
     
     de_novos$count.child.alt = de_novos$child.ALT.F + de_novos$child.ALT.R
     
+    # get the minimum alternate allele count from the parents
+    alts = data.frame(de_novos$mother.ALT.F + de_novos$mother.ALT.R,
+        de_novos$father.ALT.F + de_novos$father.ALT.R)
+    de_novos$min.parent.ALT = apply(alts, 1, min)
+    
     return(de_novos)
 }
 
-#' count of number of times that site is called
-count_site_and_gene_recurrence <- function(de_novos) {
+#' count of number of sites called per gene
+#'
+#' @param de_novos dataframe of de novo variants
+#' @export
+#'
+#' @return data frame of de novos, but with an extra column indicating the
+#        number of candidate sites in the gene.
+count_gene_recurrence <- function(de_novos) {
     
     de_novos$key = paste(de_novos$chrom, de_novos$pos, de_novos$alt, sep="_")
-    table.key = table(de_novos$key)
-    de_novos$count.sites = table.key[match(de_novos$key, row.names(table.key))]
     
     # count of number times that gene is called
     table.genes = table(de_novos$symbol)
@@ -155,7 +162,13 @@ count_site_and_gene_recurrence <- function(de_novos) {
     return(de_novos)
 }
 
-#' counts REF and ALT alleles in reads for de novo events at a single site
+#' counts REF and ALT alleles in reads for candidate de novo events
+#'
+#' @param vars dataframe of de novo variants, all at a single site, or within a
+#'             single gene.
+#' @export
+#'
+#' @return list of forward reference, forward alternate.
 get_allele_counts <- function(vars, gene=FALSE) {
     
     # count parental alt and ref
@@ -179,6 +192,13 @@ get_allele_counts <- function(vars, gene=FALSE) {
 }
 
 #' checks for strand bias per de novo site using the ref and alt counts
+#'
+#' @param site dataframe of de novo variants, all at a single site, or within a
+#'             single gene.
+#' @export
+#'
+#' @return p-value for whether the forward or reverse are biased in the
+#'        proportion of ref and alt alleles.
 site_strand_bias <- function(site) {
     x = c(site[["REF.F"]], site[["REF.R"]], site[["ALT.F"]], site[["ALT.R"]])
     x = matrix(x, nrow=2)
@@ -186,6 +206,11 @@ site_strand_bias <- function(site) {
 }
 
 #' tests each site for deviation from expected behaviour
+#'
+#' @param site dataframe of de novo variants
+#'
+#' @return p-value for whether the forward or reverse are biased in the
+#'        proportion of ref and alt alleles.
 test_sites <- function(de_novos) {
     alleles = subset(de_novos, select=c("key",
         "child.REF.F", "child.REF.R", "child.ALT.F", "child.ALT.R",
@@ -213,27 +238,33 @@ test_sites <- function(de_novos) {
     allele_counts = lapply(split(results, seq_along(results[, 1])), as.list)
     results$SB_pval = sapply(allele_counts, site_strand_bias)
     
-    return(results)
+    de_novos = merge(de_novos, results, by="key", all.x=TRUE)
+    
+    return(de_novos)
 }
 
-#' tests each gene for deviation from expected behaviour
+#' checks if the variants in a gene have more parental ALTs than expected
+#'
+#' @param site dataframe of de novo variants
+#' @export
+#'
+#' @return p-value for whether the forward or reverse are biased in the
+#'        proportion of ref and alt alleles within each gene.
 test_genes <-function(de_novos) {
-    
-    stopifnot("PA_pval_site" %in% names(de_novos))
     
     # exclude de novo SNVs that fail the strand bias filter, otherwise these
     # skew the parental alts within genes
-    alleles = de_novos[!(de_novos$SB_pval < P_CUTOFF & de_novos$var_type == "DENOVO-SNP"), ]
+    sites = de_novos[!(de_novos$SB_pval < P_CUTOFF & de_novos$var_type == "DENOVO-SNP"), ]
     
     # loop to calculate gene-specific PA values after SB filtering
-    alleles = subset(alleles, select=c("key", "symbol",
+    sites = subset(sites, select=c("key", "symbol",
         "mother.REF.F", "mother.REF.R", "mother.ALT.F", "mother.ALT.R",
         "father.REF.F", "father.REF.R", "father.ALT.F", "father.ALT.R"))
     
     # count the number of parental alleles within genes, and restructure data
     # for testing
     cat("counting alleles per gene\n")
-    genes = split(alleles, alleles$symbol)
+    genes = split(sites, sites$symbol)
     counts = lapply(genes, get_allele_counts, gene=TRUE)
     results = data.frame(matrix(unlist(counts), ncol=length(counts[[1]]), byrow=TRUE))
     names(results) = names(counts[[1]])
@@ -245,75 +276,75 @@ test_genes <-function(de_novos) {
     PA_pval = apply(parent_counts, 1, binom.test, p=ERROR_RATE, alternative="greater")
     results$PA_pval_gene = as.numeric(sapply(PA_pval, "[", "p.value"))
     
-    return(results)
+    de_novos = merge(de_novos, results, by="symbol", all.x=TRUE)
+    
+    return(de_novos)
 }
 
 #' set flags for filtering, fail samples with strand bias < threshold, or any 2 of
 #'  (i) both parents have ALTs
 #'  (ii) site-specific parental alts < threshold,
 #'  (iii) gene-specific parental alts < threshold, if > 1 sites called in gene
-set_filter_flag <- function(de_novos, keep_all=FALSE) {
+#'
+#' @param site dataframe of de novo variants
+#' @export
+#'
+#' @return vector of true/false for whether each variant passes the filters
+get_filter_status <- function(de_novos, keep_all=FALSE) {
     
-    de_novos$overall.pass = "PASS"
+    overall_pass = rep(TRUE, nrow(de_novos))
     
     # fail SNVs with excessive strand bias
-    de_novos$overall.pass[de_novos$SB_pval < P_CUTOFF & de_novos$var_type == "DENOVO-SNP"] = "FAIL"
+    overall_pass[de_novos$SB_pval < P_CUTOFF & de_novos$var_type == "DENOVO-SNP"] = FALSE
     
     # find if each de novo has passed each of three different filtering strategies
     # fail sites with gene-specific parental alts, only if >1 sites called per gene
     gene_fail = de_novos$PA_pval_gene < P_CUTOFF & de_novos$count.genes > 1
     site_fail = de_novos$PA_pval_site < P_CUTOFF
-    
-    # fail sites
     excess_alts = de_novos$min.parent.ALT > 0
     
-    # fail sites with parental alts, any two of three classes
+    # exclude sites that fail two of three classes
     sites = data.frame(gene_fail, site_fail, excess_alts)
-    sites_fail = apply(sites, 1, sum) >= 2
+    overall_pass[apply(sites, 1, sum) >= 2] = FALSE
     
-    # fail sites with excess parental alt reads
-    de_novos$overall.pass[sites_fail] = "FAIL"
+    return(overall_pass)
+}
+
+#' subset down to specific columns
+#'
+#' @param site dataframe of de novo variants
+#' @export
+#'
+#' @return data frame with only the pertinent columns included
+subset_de_novos <- function(de_novos) {
     
-    if (!keep_all) {
-        # subset down to specific columns
-        de_novos = subset(de_novos, select=c("person_stable_id", "gender",
-            "mother_stable_id", "father_stable_id", "chrom", "pos", "ref", "alt",
-            "symbol", "var_type", "consequence", "ensg", "enst", "max_af", "pp_dnm",
-            "child_alt_prp", "in_dominant_ddg2p", "coding", "overall.pass",
-            "child.REF.F", "child.REF.R", "child.ALT.F", "child.ALT.R",
-            "mother.REF.F", "mother.REF.R", "mother.ALT.F", "mother.ALT.R",
-            "father.REF.F", "father.REF.R", "father.ALT.F", "father.ALT.R"))
-    }
+    de_novos = subset(de_novos, select=c("person_stable_id", "gender",
+        "mother_stable_id", "father_stable_id", "chrom", "pos", "ref", "alt",
+        "symbol", "var_type", "consequence", "ensg", "enst", "max_af", "pp_dnm",
+        "child_alt_prp", "coding", "overall_pass",
+        "child.REF.F", "child.REF.R", "child.ALT.F", "child.ALT.R",
+        "mother.REF.F", "mother.REF.R", "mother.ALT.F", "mother.ALT.R",
+        "father.REF.F", "father.REF.R", "father.ALT.F", "father.ALT.R"))
     
     return(de_novos)
 }
-
 
 main <- function() {
     de_novos = read.table(DE_NOVOS_PATH, header=TRUE, sep="\t", stringsAsFactors=FALSE)
     
     de_novos = preliminary_filtering(de_novos)
     de_novos = fix_missing_gene_symbols(de_novos)
-    de_novos = annotate_with_ddg2p(de_novos)
     de_novos = extract_alt_and_ref_counts(de_novos)
     de_novos = count_site_and_gene_recurrence(de_novos)
     
-    site_results = test_sites(de_novos)
-    de_novos = merge(de_novos, site_results, by="key", all.x=TRUE)
+    de_novos = test_sites(de_novos)
+    de_novos = test_genes(de_novos)
     
-    # get the minimum alternate allele count from the parents
-    alts = data.frame(de_novos$mother.ALT.F + de_novos$mother.ALT.R,
-        de_novos$father.ALT.F + de_novos$father.ALT.R)
-    de_novos$min.parent.ALT = apply(alts, 1, min)
-    
-    # test whether any genes have an excess of parental alts
-    gene_results = test_genes(de_novos)
-    de_novos = merge(de_novos, gene_results, by="symbol", all.x=TRUE)
-    
-    de_novos = set_filter_flag(de_novos)
-    passed = de_novos[de_novos$overall.pass == "PASS" & de_novos$coding, ]
+    pass_status = get_filter_status(de_novos)
+    passed = de_novos[pass_status & de_novos$coding, ]
     passed = get_independent_de_novos(passed)
     
+    de_novos = subset_de_novos(de_novos)
     write.table(passed, file="~/de_novos.ddd_4k.ddd_only.txt",
         quote=FALSE, row.names=FALSE, sep="\t")
 }
