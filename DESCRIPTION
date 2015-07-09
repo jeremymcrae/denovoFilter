@@ -1,5 +1,5 @@
 Package: denovoFilter
-Title: Filtering De Novo Sites
+Title: Filtering Candidate De Novo Sites
 Version: 0.1.0
 Authors@R: person("Jeremy", "McRae", email = "jeremy.mcrae@sanger.ac.uk",
                   role = c("aut", "cre"))
