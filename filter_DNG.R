@@ -54,7 +54,7 @@ preliminary_filtering <- function(de_novos) {
     # high quality
     # NEED TO UPDATE WITH CAROLINE'S NEW SAMPLE FILE LIST, OR USE PRE-FILTERED SET OF DNMS
     sample.fails = c("276227", "258876", "273778", "258921", "272110", "260337",
-     "264083", "264084", "269602", "265624")
+        "264083", "264084", "269602", "265624")
     de_novos = de_novos[!de_novos$decipher_id %in% sample.fails, ]
     
     # Annotate de_novos hitting coding exons or splice sites
