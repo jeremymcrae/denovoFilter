@@ -15,18 +15,18 @@ extract_alt_and_ref_counts <- function(de_novos) {
         dp4 = strsplit(de_novos[[paste("dp4_", member, sep="")]], ",")
         
         # split the forward and reverse counts by ref and alt for each member
-        de_novos[[paste(member, ".REF.F", sep="")]] = as.numeric(sapply(dp4, "[", 1))
-        de_novos[[paste(member, ".REF.R", sep="")]] = as.numeric(sapply(dp4, "[", 2))
-        de_novos[[paste(member, ".ALT.F", sep="")]] = as.numeric(sapply(dp4, "[", 3))
-        de_novos[[paste(member, ".ALT.R", sep="")]] = as.numeric(sapply(dp4, "[", 4))
+        de_novos[[paste(member, "_ref_F", sep="")]] = as.numeric(sapply(dp4, "[", 1))
+        de_novos[[paste(member, "_ref_R", sep="")]] = as.numeric(sapply(dp4, "[", 2))
+        de_novos[[paste(member, "_alt_F", sep="")]] = as.numeric(sapply(dp4, "[", 3))
+        de_novos[[paste(member, "_alt_R", sep="")]] = as.numeric(sapply(dp4, "[", 4))
     }
     
-    de_novos$count.child.alt = de_novos$child.ALT.F + de_novos$child.ALT.R
+    de_novos$count.child.alt = de_novos$child_alt_F + de_novos$child_alt_R
     
     # get the minimum alternate allele count from the parents
-    alts = data.frame(de_novos$mother.ALT.F + de_novos$mother.ALT.R,
-        de_novos$father.ALT.F + de_novos$father.ALT.R)
-    de_novos$min.parent.ALT = apply(alts, 1, min)
+    alts = data.frame(de_novos$mother_alt_F + de_novos$mother_alt_R,
+        de_novos$father_alt_F + de_novos$father_alt_R)
+    de_novos$min_parent_alt = apply(alts, 1, min)
     
     return(de_novos)
 }
@@ -61,20 +61,20 @@ count_gene_recurrence <- function(de_novos) {
 get_allele_counts <- function(vars, gene=FALSE) {
     
     # count parental alt and ref
-    parent.ALT = sum(vars[, c("mother.ALT.F", "father.ALT.F", "mother.ALT.R", "father.ALT.R")])
-    parent.REF = sum(vars[, c("mother.REF.F", "father.REF.F", "mother.REF.R", "father.REF.R")])
+    parent_alt = sum(vars[, c("mother_alt_F", "father_alt_F", "mother_alt_R", "father_alt_R")])
+    parent_ref = sum(vars[, c("mother_ref_F", "father_ref_F", "mother_ref_R", "father_ref_R")])
     values = list()
     
     if (!gene) {
-        values$REF.F = sum(vars[, c("child.REF.F", "mother.REF.F", "father.REF.F")])
-        values$REF.R = sum(vars[, c("child.REF.R", "mother.REF.R", "father.REF.R")])
-        values$ALT.F = sum(vars[, c("child.ALT.F", "mother.ALT.F", "father.ALT.F")])
-        values$ALT.R = sum(vars[, c("child.ALT.R", "mother.ALT.R", "father.ALT.R")])
-        values$parent.ALT = parent.ALT
-        values$parent.REF = parent.REF
+        values$ref_F = sum(vars[, c("child_ref_F", "mother_ref_F", "father_ref_F")])
+        values$ref_R = sum(vars[, c("child_ref_R", "mother_ref_R", "father_ref_R")])
+        values$alt_F = sum(vars[, c("child_alt_F", "mother_alt_F", "father_alt_F")])
+        values$alt_R = sum(vars[, c("child_alt_R", "mother_alt_R", "father_alt_R")])
+        values$parent_alt = parent_alt
+        values$parent_ref = parent_ref
     } else {
-        values$gene.ALT = parent.ALT
-        values$gene.REF = parent.REF
+        values$gene_alt = parent_alt
+        values$gene_ref = parent_ref
     }
     
     return(values)

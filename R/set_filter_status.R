@@ -19,7 +19,7 @@ get_filter_status <- function(de_novos) {
     # fail sites with gene-specific parental alts, only if >1 sites called per gene
     gene_fail = de_novos$PA_pval_gene < P_CUTOFF & de_novos$count.genes > 1
     site_fail = de_novos$PA_pval_site < P_CUTOFF
-    excess_alts = de_novos$min.parent.ALT > 0
+    excess_alts = de_novos$min_parent_alt > 0
     
     # exclude sites that fail two of three classes
     sites = data.frame(gene_fail, site_fail, excess_alts)
@@ -40,9 +40,9 @@ subset_de_novos <- function(de_novos) {
         "mother_stable_id", "father_stable_id", "chrom", "pos", "ref", "alt",
         "symbol", "var_type", "consequence", "ensg", "enst", "max_af", "pp_dnm",
         "child_alt_prp", "coding", "overall_pass",
-        "child.REF.F", "child.REF.R", "child.ALT.F", "child.ALT.R",
-        "mother.REF.F", "mother.REF.R", "mother.ALT.F", "mother.ALT.R",
-        "father.REF.F", "father.REF.R", "father.ALT.F", "father.ALT.R"))
+        "child_ref_F", "child_ref_R", "child_alt_F", "child_alt_R",
+        "mother_ref_F", "mother_ref_R", "mother_alt_F", "mother_alt_R",
+        "father_ref_F", "father_ref_R", "father_alt_F", "father_alt_R"))
     
     return(de_novos)
 }

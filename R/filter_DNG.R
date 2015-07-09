@@ -8,7 +8,7 @@
 #' @return p-value for whether the forward or reverse are biased in the
 #'        proportion of ref and alt alleles.
 site_strand_bias <- function(site) {
-    x = c(site[["REF.F"]], site[["REF.R"]], site[["ALT.F"]], site[["ALT.R"]])
+    x = c(site[["ref_F"]], site[["ref_R"]], site[["alt_F"]], site[["alt_R"]])
     x = matrix(x, nrow=2)
     return(fisher.test(x)$p.value)
 }
@@ -16,14 +16,15 @@ site_strand_bias <- function(site) {
 #' tests each site for deviation from expected behaviour
 #'
 #' @param de_novos dataframe of de novo variants
+#' @export
 #'
 #' @return p-value for whether the forward or reverse are biased in the
 #'        proportion of ref and alt alleles.
 test_sites <- function(de_novos) {
     alleles = subset(de_novos, select=c("key",
-        "child.REF.F", "child.REF.R", "child.ALT.F", "child.ALT.R",
-        "mother.REF.F", "mother.REF.R", "mother.ALT.F", "mother.ALT.R",
-        "father.REF.F", "father.REF.R", "father.ALT.F", "father.ALT.R"))
+        "child_ref_F", "child_ref_R", "child_alt_F", "child_alt_R",
+        "mother_ref_F", "mother_ref_R", "mother_alt_F", "mother_alt_R",
+        "father_ref_F", "father_ref_R", "father_alt_F", "father_alt_R"))
     
     cat("splitting by site\n")
     variants = split(alleles, alleles$key)
@@ -37,7 +38,7 @@ test_sites <- function(de_novos) {
     
     # check for overabundance of parental alt alleles using binomial test
     cat("testing parental alt overabundance\n")
-    parent_counts = data.frame(results$parent.ALT, (results$parent.ALT + results$parent.REF))
+    parent_counts = data.frame(results$parent_alt, (results$parent_alt + results$parent_ref))
     PA_pval_site = apply(parent_counts, 1, binom.test, p=ERROR_RATE, alternative="greater")
     results$PA_pval_site = as.numeric(sapply(PA_pval_site, "[", "p.value"))
     
@@ -66,8 +67,8 @@ test_genes <-function(de_novos) {
     
     # loop to calculate gene-specific PA values after SB filtering
     sites = subset(sites, select=c("key", "symbol",
-        "mother.REF.F", "mother.REF.R", "mother.ALT.F", "mother.ALT.R",
-        "father.REF.F", "father.REF.R", "father.ALT.F", "father.ALT.R"))
+        "mother_ref_F", "mother_ref_R", "mother_alt_F", "mother_alt_R",
+        "father_ref_F", "father_ref_R", "father_alt_F", "father_alt_R"))
     
     # count the number of parental alleles within genes, and restructure data
     # for testing
@@ -80,7 +81,7 @@ test_genes <-function(de_novos) {
     
     # check for overabundance of parental alt alleles using binomial test
     cat("testing parental alt overabundance\n")
-    parent_counts = data.frame(results$gene.ALT, (results$gene.ALT + results$gene.REF))
+    parent_counts = data.frame(results$gene_alt, (results$gene_alt + results$gene_ref))
     PA_pval = apply(parent_counts, 1, binom.test, p=ERROR_RATE, alternative="greater")
     results$PA_pval_gene = as.numeric(sapply(PA_pval, "[", "p.value"))
     

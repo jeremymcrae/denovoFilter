@@ -1,8 +1,10 @@
 # filter DNG callset initially on basis of
 
+library(denovoFilter)
+
 DATAFREEZE_DIR = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13"
 DE_NOVOS_PATH = file.path(DATAFREEZE_DIR, "denovo_gear_trios_extracted_passed_variants_11.05.15.tsv")
-TRIOS_PATH = file.path(DATAFREEZE_DIR, "family_relationships.txt")
+TRIOS_PATH = file.path("/nfs/ddd0/Data/datafreeze/ddd_data_releases/2014-11-04/family_relationships.txt")
 
 main <- function() {
     de_novos = read.table(DE_NOVOS_PATH, header=TRUE, sep="\t", stringsAsFactors=FALSE)
