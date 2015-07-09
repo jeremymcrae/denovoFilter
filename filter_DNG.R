@@ -58,9 +58,10 @@ preliminary_filtering <- function(de_novos) {
     de_novos = de_novos[!de_novos$decipher_id %in% sample.fails, ]
     
     # Annotate de_novos hitting coding exons or splice sites
-    coding_splicing = c("frameshift_variant", "inframe_deletion",
-        "inframe_insertion", "initiator_codon_variant", "missense_variant",
-        "splice_acceptor_variant", "splice_donor_variant", "splice_region_variant",
+    coding_splicing = c("coding_sequence_variant", "frameshift_variant",
+        "inframe_deletion", "inframe_insertion", "initiator_codon_variant",
+        "missense_variant", "protein_altering_variant", "splice_acceptor_variant",
+        "splice_donor_variant", "splice_region_variant", "start_lost",
         "stop_gained", "stop_lost", "synonymous_variant")
         
     de_novos$coding = de_novos$consequence %in% coding_splicing
