@@ -123,33 +123,19 @@ annotate_with_ddg2p <- function(de_novos) {
 #' each trio
 extract_alt_and_ref_counts <- function(de_novos) {
     
-    de_novos$dp4.child = strsplit(de_novos$dp4_child, split=",")
+    members = c("child", "father", "mother")
     
-    de_novos$child.REF.F = as.numeric(sapply(de_novos$dp4.child, "[", 1))
-    de_novos$child.REF.R = as.numeric(sapply(de_novos$dp4.child, "[", 2))
-    de_novos$child.ALT.F = as.numeric(sapply(de_novos$dp4.child, "[", 3))
-    de_novos$child.ALT.R = as.numeric(sapply(de_novos$dp4.child, "[", 4))
-    
-    de_novos$dp4.father = strsplit(as.character(de_novos$dp4_father), split=",")
-    
-    de_novos$father.REF.F = as.numeric(sapply(de_novos$dp4.father, "[", 1))
-    de_novos$father.REF.R = as.numeric(sapply(de_novos$dp4.father, "[", 2))
-    de_novos$father.ALT.F = as.numeric(sapply(de_novos$dp4.father, "[", 3))
-    de_novos$father.ALT.R = as.numeric(sapply(de_novos$dp4.father, "[", 4))
-    
-    de_novos$dp4.mother = strsplit(as.character(de_novos$dp4_mother), split=",")
-    
-    de_novos$mother.REF.F = as.numeric(sapply(de_novos$dp4.mother, "[", 1))
-    de_novos$mother.REF.R = as.numeric(sapply(de_novos$dp4.mother, "[", 2))
-    de_novos$mother.ALT.F = as.numeric(sapply(de_novos$dp4.mother, "[", 3))
-    de_novos$mother.ALT.R = as.numeric(sapply(de_novos$dp4.mother, "[", 4))
+    for (member in members) {
+        dp4 = strsplit(de_novos[[paste("dp4_", member, sep="")]], ",")
+        
+        # split the forward and reverse counts by ref and alt for each member
+        de_novos[[paste(member, ".REF.F", sep="")]] = as.numeric(sapply(dp4, "[", 1))
+        de_novos[[paste(member, ".REF.R", sep="")]] = as.numeric(sapply(dp4, "[", 2))
+        de_novos[[paste(member, ".ALT.F", sep="")]] = as.numeric(sapply(dp4, "[", 3))
+        de_novos[[paste(member, ".ALT.R", sep="")]] = as.numeric(sapply(dp4, "[", 4))
+    }
     
     de_novos$count.child.alt = de_novos$child.ALT.F + de_novos$child.ALT.R
-    
-    # remove the DP4 columns (since they are now lists)
-    de_novos$dp4.child = NULL
-    de_novos$dp4.mother = NULL
-    de_novos$dp4.father = NULL
     
     return(de_novos)
 }
