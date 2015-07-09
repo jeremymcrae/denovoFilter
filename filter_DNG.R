@@ -15,7 +15,7 @@ library(mupit)
 # - with gene-specific parental alt (PA) frequency, after removal of SB filtered sites
 DATAFREEZE_DIR = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2014-11-04"
 DDG2P_PATH = file.path(DATAFREEZE_DIR, "DDG2P_freeze_with_gencode19_genomic_coordinates_20141118_fixed.txt")
-DE_NOVOS_PATH = file.path(DATAFREEZE_DIR, "denovo_gear_trios_extracted_passed_variants_19.02.15.tsv")
+DE_NOVOS_PATH = file.path(DATAFREEZE_DIR, "denovo_gear_trios_extracted_passed_variants_17.04.15.tsv")
 
 # estimated error rate at 0.0012 from DNM calls in parents in DDG2P genes, set
 # slightly higher to be conservative
@@ -24,7 +24,7 @@ ERROR_RATE = 0.002
 # threshold for removing sites with high strand bias, or parental alt frequency
 P_CUTOFF = 1e-3
 
-#' fix a few MAF values that are clank, or have liusts of MAF values
+#' fix a few MAF values that are clank, or have lists of MAF values
 fix_maf <- function(dnms) {
     # annotate with numeric max allele freq
     # fix the blank and null max AF values
@@ -44,14 +44,14 @@ fix_maf <- function(dnms) {
 preliminary_filtering <- function(dnms) {
     dnms = fix_maf(dnms)
     
-    # keep sites in child vcf not in parental vcfs (leaves 123919)
+    # keep sites in child vcf, and not in parental vcfs
     dnms = dnms[dnms$in_child_vcf == 1 & dnms$in_father_vcf == 0 & dnms$in_mother_vcf == 0, ]
     
-    # filter on max_af (leaves 23490)
+    # remove sites with high population frequencies
     dnms = dnms[dnms$max_af < 0.01 & !is.na(dnms$max_af), ]
     
     # remove dnms in samples with >> too many DNMs, focus on too many DNMs at
-    # high quality (leaves 17794)
+    # high quality
     # NEED TO UPDATE WITH CAROLINE'S NEW SAMPLE FILE LIST, OR USE PRE-FILTERED SET OF DNMS
     sample.fails = c("276227", "258876", "273778", "258921", "272110", "260337",
      "264083", "264084", "269602", "265624")
@@ -64,12 +64,6 @@ preliminary_filtering <- function(dnms) {
         "stop_gained", "stop_lost", "synonymous_variant")
         
     dnms$coding = dnms$consequence %in% coding_splicing
-    
-    # filtering down to coding (leaves 9057)
-    # dnms = dnms[dnms$coding, ]
-    
-    # filter to high quality de novos (leaves 5536)
-    # dnms = dnms[dnms$pp_dnm > 0.9, ]
     
     return(dnms)
 }
@@ -85,7 +79,7 @@ fix_missing_gene_symbols <- function(dnms) {
         (nchar(missing_genes$ref) - 1))
     
     # find the HGNC symbols (if any) for the variants
-    hgnc_symbols = apply(missing_genes, 1, get_gene_id_for_variant, verbose=TRUE)
+    hgnc_symbols = apply(missing_genes, 1, mupit::get_gene_id_for_variant, verbose=TRUE)
     
     # add the HGNC symbols to the rows that need it
     dnms$symbol[dnms$symbol == ""] = hgnc_symbols
