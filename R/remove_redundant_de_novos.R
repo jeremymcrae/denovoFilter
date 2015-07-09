@@ -1,15 +1,10 @@
 # script to obtain independent de novo events (ie exclude de novos that recur
 # within families).
 
-library(mupit)
-
-DATAFREEZE_DIR = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2014-11-04"
-TRIOS_PATH = file.path(DATAFREEZE_DIR, "family_relationships.txt")
-
 consequences = c("transcript_ablation", "splice_donor_variant",
     "splice_acceptor_variant", "stop_gained", "frameshift_variant",
-    "stop_lost", "initiator_codon_variant", "transcript_amplification",
-    "inframe_insertion", "inframe_deletion", "missense_variant",
+    "stop_lost", "initiator_codon_variant", "start_lost", "transcript_amplification",
+    "inframe_insertion", "inframe_deletion", "missense_variant", "protein_altering_variant",
     "splice_region_variant", "incomplete_terminal_codon_variant",
     "stop_retained_variant", "synonymous_variant", "coding_sequence_variant",
     "mature_miRNA_variant", "5_prime_UTR_variant", "3_prime_UTR_variant",
@@ -24,6 +19,16 @@ severity = data.frame(consequence=consequences, rank=seq(1:length(consequences))
     stringsAsFactors=FALSE)
 
 #' opens a file defining the DDD individuals, and their families
+#'
+#' This gives us family information, so that we can identify siblings within a
+#' family. We need to know this as sometimes de novo events recur within
+#' families, so we have to remove all except for one, to prevent over-counting
+#' the de novos.
+#'
+#' @param path path to a PED file listing all the trios
+#' @export
+#'
+#' @return dataframe of families information
 open_ddd_families <- function(path) {
     families = read.table(path, header=TRUE, sep="\t", stringsAsFactors=FALSE)
     
@@ -35,6 +40,11 @@ open_ddd_families <- function(path) {
 }
 
 #' get the most severe consequence from a list of VEP consequences
+#'
+#' @param consequences vector of VEP consequence strings
+#' @export
+#'
+#' @return single string for the most severe consequence
 get_most_severe <- function(consequences) {
     
     best_rank = NA
@@ -57,6 +67,11 @@ get_most_severe <- function(consequences) {
 #' single gene. We shall treat these as a single de novo event. Prioritise
 #' including the most severe event within a gene, then take the first variant
 #' left after that.
+#'
+#' @param de_novos dataframe of de novo variants
+#' @export
+#'
+#' @return dataframe with duplicated sites per gene removed for each individual
 remove_within_person_recurrences <- function(de_novos) {
     
     # find the variants which are recurrent within a person in a single gene
@@ -94,8 +109,14 @@ remove_within_person_recurrences <- function(de_novos) {
 
 #' remove de novos that are shared between multiple probands of a family or that
 #' are recurrent in a single gene in a single person
-get_independent_de_novos <- function(de_novos) {
-    families = open_ddd_families(TRIOS_PATH)
+#'
+#' @param de_novos dataframe of de novo variants
+#' @param trios_path path to a PED file listing all the trios
+#' @export
+#'
+#' @return dataframe with duplicated sites removed
+get_independent_de_novos <- function(de_novos, trios_path) {
+    families = open_ddd_families(trios_path)
     
     # merge the family IDs with the de novo events, sort the de novos first, so
     # that we can correctly match to the duplicate status

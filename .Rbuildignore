@@ -1,0 +1,5 @@
+data-raw$
+results$
+scripts$
+^.*\.pdf$
+\.travis\.yml

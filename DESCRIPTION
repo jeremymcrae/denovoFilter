@@ -1,0 +1,17 @@
+Package: denovoFilter
+Title: Filtering De Novo Sites
+Version: 0.1.0
+Authors@R: person("Jeremy", "McRae", email = "jeremy.mcrae@sanger.ac.uk",
+                  role = c("aut", "cre"))
+Description: Filters candidate de novo sites for sites with high quality
+    metrics. We use the strand bias at a site, and within genes, along with
+    deviations in the number of parental alts to screen out sites that are poor
+    quality.
+Depends:
+    R (>= 2.15.0)
+License: MIT + file LICENSE
+LazyData: true
+Imports:
+    mupit
+Suggests:
+    testthat

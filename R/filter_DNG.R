@@ -4,6 +4,7 @@ library(mupit)
 
 DATAFREEZE_DIR = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13"
 DE_NOVOS_PATH = file.path(DATAFREEZE_DIR, "denovo_gear_trios_extracted_passed_variants_11.05.15.tsv")
+TRIOS_PATH = file.path(DATAFREEZE_DIR, "family_relationships.txt")
 
 # estimated error rate at 0.0012 from DNM calls in parents in DDG2P genes, set
 # slightly higher to be conservative
@@ -166,6 +167,8 @@ count_gene_recurrence <- function(de_novos) {
 #'
 #' @param vars dataframe of de novo variants, all at a single site, or within a
 #'             single gene.
+#' @param gene whether the set of variants of all within a single gene (rather
+#'        than at a site)
 #' @export
 #'
 #' @return list of forward reference, forward alternate.
@@ -207,7 +210,7 @@ site_strand_bias <- function(site) {
 
 #' tests each site for deviation from expected behaviour
 #'
-#' @param site dataframe of de novo variants
+#' @param de_novos dataframe of de novo variants
 #'
 #' @return p-value for whether the forward or reverse are biased in the
 #'        proportion of ref and alt alleles.
@@ -245,7 +248,7 @@ test_sites <- function(de_novos) {
 
 #' checks if the variants in a gene have more parental ALTs than expected
 #'
-#' @param site dataframe of de novo variants
+#' @param de_novos dataframe of de novo variants
 #' @export
 #'
 #' @return p-value for whether the forward or reverse are biased in the
@@ -286,11 +289,11 @@ test_genes <-function(de_novos) {
 #'  (ii) site-specific parental alts < threshold,
 #'  (iii) gene-specific parental alts < threshold, if > 1 sites called in gene
 #'
-#' @param site dataframe of de novo variants
+#' @param de_novos dataframe of de novo variants
 #' @export
 #'
 #' @return vector of true/false for whether each variant passes the filters
-get_filter_status <- function(de_novos, keep_all=FALSE) {
+get_filter_status <- function(de_novos) {
     
     overall_pass = rep(TRUE, nrow(de_novos))
     
@@ -312,7 +315,7 @@ get_filter_status <- function(de_novos, keep_all=FALSE) {
 
 #' subset down to specific columns
 #'
-#' @param site dataframe of de novo variants
+#' @param de_novos dataframe of de novo variants
 #' @export
 #'
 #' @return data frame with only the pertinent columns included
@@ -335,21 +338,21 @@ main <- function() {
     de_novos = preliminary_filtering(de_novos)
     de_novos = fix_missing_gene_symbols(de_novos)
     de_novos = extract_alt_and_ref_counts(de_novos)
-    de_novos = count_site_and_gene_recurrence(de_novos)
+    de_novos = count_gene_recurrence(de_novos)
     
     de_novos = test_sites(de_novos)
     de_novos = test_genes(de_novos)
     
     pass_status = get_filter_status(de_novos)
     passed = de_novos[pass_status & de_novos$coding, ]
-    passed = get_independent_de_novos(passed)
+    passed = get_independent_de_novos(passed, TRIOS_PATH)
     
     de_novos = subset_de_novos(de_novos)
     write.table(passed, file="~/de_novos.ddd_4k.ddd_only.txt",
         quote=FALSE, row.names=FALSE, sep="\t")
 }
 
-# R equivalent of "if main"
-if(getOption("run.main", default=TRUE)) {
-    main()
-}
+# # R equivalent of "if main"
+# if(getOption("run.main", default=TRUE)) {
+#     main()
+# }
