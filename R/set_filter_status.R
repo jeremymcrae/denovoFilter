@@ -23,7 +23,7 @@ get_filter_status <- function(de_novos) {
     
     # exclude sites that fail two of three classes
     sites = data.frame(gene_fail, site_fail, excess_alts)
-    overall_pass[apply(sites, 1, sum) >= 2] = FALSE
+    overall_pass[rowSums(sites, na.rm=TRUE) >= 2] = FALSE
     
     return(overall_pass)
 }

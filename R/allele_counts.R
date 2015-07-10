@@ -60,16 +60,19 @@ count_gene_recurrence <- function(de_novos) {
 #' @return list of forward reference, forward alternate.
 get_allele_counts <- function(vars, gene=FALSE) {
     
+    #  sum the counts from different de novo calls
+    counts = colSums(vars[, 2:ncol(vars)])
+    
     # count parental alt and ref
-    parent_alt = sum(vars[, c("mother_alt_F", "father_alt_F", "mother_alt_R", "father_alt_R")])
-    parent_ref = sum(vars[, c("mother_ref_F", "father_ref_F", "mother_ref_R", "father_ref_R")])
+    parent_alt = sum(counts[c("mother_alt_F", "father_alt_F", "mother_alt_R", "father_alt_R")])
+    parent_ref = sum(counts[c("mother_ref_F", "father_ref_F", "mother_ref_R", "father_ref_R")])
     values = list()
     
     if (!gene) {
-        values$ref_F = sum(vars[, c("child_ref_F", "mother_ref_F", "father_ref_F")])
-        values$ref_R = sum(vars[, c("child_ref_R", "mother_ref_R", "father_ref_R")])
-        values$alt_F = sum(vars[, c("child_alt_F", "mother_alt_F", "father_alt_F")])
-        values$alt_R = sum(vars[, c("child_alt_R", "mother_alt_R", "father_alt_R")])
+        values$ref_F = sum(counts[c("child_ref_F", "mother_ref_F", "father_ref_F")])
+        values$ref_R = sum(counts[c("child_ref_R", "mother_ref_R", "father_ref_R")])
+        values$alt_F = sum(counts[c("child_alt_F", "mother_alt_F", "father_alt_F")])
+        values$alt_R = sum(counts[c("child_alt_R", "mother_alt_R", "father_alt_R")])
         values$parent_alt = parent_alt
         values$parent_ref = parent_ref
     } else {
