@@ -9,6 +9,7 @@ library(ggplot2)
 DE_NOVOS_PATH = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13/denovo_gear_trios_extracted_passed_variants_11.05.15.tsv"
 TRIOS_PATH = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2014-11-04/family_relationships.txt"
 VALIDATIONS_PATH = "/nfs/ddd0/Data/datafreeze/1133trios_20131218/DNG_Validation_1133trios_20140130.tsv"
+SEGDUPS_PATH = file.path("data-raw", "segdup_regions.gz")
 
 open_validations <- function(path) {
     validations = read.table(path, sep="\t", header=TRUE, stringsAsFactors=FALSE)
@@ -34,6 +35,7 @@ main <- function() {
     de_novos = read.table(DE_NOVOS_PATH, header=TRUE, sep="\t", stringsAsFactors=FALSE)
     
     de_novos = preliminary_filtering(de_novos)
+    de_novos = exclude_segdups(de_novos, SEGDUPS_PATH)
     de_novos = fix_missing_gene_symbols(de_novos)
     de_novos = extract_alt_and_ref_counts(de_novos)
     de_novos = count_gene_recurrence(de_novos)

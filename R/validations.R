@@ -3,6 +3,7 @@
 #'
 #' @param de_novos dataframe of candidate de novo sites
 #' @param validations dataframe of de novo sites with validation status
+#' @param plot_pp_dnm whether to plot distribyutions of pp_dnm by validation status
 #' @export
 #'
 #' @return something

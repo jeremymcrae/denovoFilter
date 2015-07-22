@@ -10,6 +10,8 @@ check_validations(de_novos, validations, plot_pp_dnm = FALSE)
 \item{de_novos}{dataframe of candidate de novo sites}
 
 \item{validations}{dataframe of de novo sites with validation status}
+
+\item{plot_pp_dnm}{whether to plot distribyutions of pp_dnm by validation status}
 }
 \value{
 something

@@ -38,7 +38,7 @@ test_sites <- function(de_novos) {
     
     # check for overabundance of parental alt alleles using binomial test
     cat("testing parental alt overabundance\n")
-    parent_counts = data.frame(results$parent_alt, (results$parent_alt + results$parent_ref))
+    parent_counts = data.frame(results$parent_alt, results$parent_ref)
     PA_pval_site = apply(parent_counts, 1, binom.test, p=ERROR_RATE, alternative="greater")
     results$PA_pval_site = as.numeric(sapply(PA_pval_site, "[", "p.value"))
     
@@ -66,7 +66,7 @@ test_genes <-function(de_novos) {
     sites = de_novos[!(de_novos$SB_pval < P_CUTOFF & de_novos$var_type == "DENOVO-SNP"), ]
     
     # loop to calculate gene-specific PA values after SB filtering
-    sites = subset(sites, select=c("key", "symbol",
+    sites = subset(sites, select=c("symbol",
         "mother_ref_F", "mother_ref_R", "mother_alt_F", "mother_alt_R",
         "father_ref_F", "father_ref_R", "father_alt_F", "father_alt_R"))
     
@@ -81,7 +81,7 @@ test_genes <-function(de_novos) {
     
     # check for overabundance of parental alt alleles using binomial test
     cat("testing parental alt overabundance\n")
-    parent_counts = data.frame(results$gene_alt, (results$gene_alt + results$gene_ref))
+    parent_counts = data.frame(results$gene_alt, results$gene_ref)
     PA_pval = apply(parent_counts, 1, binom.test, p=ERROR_RATE, alternative="greater")
     results$PA_pval_gene = as.numeric(sapply(PA_pval, "[", "p.value"))
     

@@ -21,8 +21,6 @@ extract_alt_and_ref_counts <- function(de_novos) {
         de_novos[[paste(member, "_alt_R", sep="")]] = as.numeric(sapply(dp4, "[", 4))
     }
     
-    de_novos$count.child.alt = de_novos$child_alt_F + de_novos$child_alt_R
-    
     # get the minimum alternate allele count from the parents
     alts = data.frame(de_novos$mother_alt_F + de_novos$mother_alt_R,
         de_novos$father_alt_F + de_novos$father_alt_R)
