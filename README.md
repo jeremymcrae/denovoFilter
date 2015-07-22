@@ -36,15 +36,6 @@ python setup.py install --user
 ```
 
 ### Filtering the candidate *de novos*
-Define the paths for input files:
- * candidate de novos listed in tab-separated file containing 23 columns for
-   person_stable_id, gender, mother_stable_id, father_stable_id, chrom, pos,
-   ref, alt, symbol, dp4_child, dp4_mother, dp4_father, pp_dnm, max_af,
-   child_alt_prp, consequence, in_child_vcf, in_mother_vcf, in_father_vcf,
-   decipher_id, var_type, ensg, enst.
- * family relationships listed in tab-separated file containing columns for
-   family_id and individual_id.
-
 A script is included (`scripts/filter_de_novos.py`) which can be used as:
 ```sh
 python scripts/filter_de_novos.py \
@@ -52,3 +43,37 @@ python scripts/filter_de_novos.py \
   --families FAMILIES_PATH \
   --output OUTPUT_PATH
 ```
+
+### Input files
+#### Definitions for the required columns in the candidate *de novos* file
+| name             | example       | definition                            |
+| -----------      | ------------- | -------------                         |
+| person_stable_id | "DDDP100001"  | ID of the proband                     |
+| gender           | "M"           | sex of the proband (M=male, F=female) |
+| mother_stable_id | "DDDP100002"  | ID of the mother                      |
+| father_stable_id | "DDDP100003"  | ID of the father                      |
+| chrom            | "1"           | chromosome that the candidate is on   |
+| pos              | 1000001       | nucleotide position of the candidate along the chromosome |
+| ref              | "A"           | base-code for the reference allele    |
+| alt              | "G"           | base-code for the alternate allele    |
+| symbol           | "ATRX"        | HGNC symbol of the gene that the variant lies in (or blank for no gene) |
+| dp4_child        | 10,12,9,10    | Comma-separated read-depths in the child for the reference allele in the forward orientation, the reference allele in the reverse orientation, the alternate allele in the forward orientation, and the alternate allele in the reverse orientation. Orientation is with respect to the reference genome. |
+| dp4_mother       | 15,17,0,0     | Read-depths in the mother as for dp4_child |
+| dp4_father       | 13,14,0,0     | Read-depths in the father as for dp4_child |
+| pp_dnm           | 0.952         | Posterior probability of de novo mutation from denovogear |
+| max_af           | 0.0001        | Highest allele frequency for alternate allele from reference healthy control population |
+| child_alt_prp    | 0.51          | Proportion of the number of read containing the alternate allele to the total depth |
+| consequence      | "missense_variant" | VEP-annotated consequence for the variant |
+| in_child_vcf     | 1             | Whether the variant is present in the child's VCF (1=true, 0=false) |
+| in_mother_vcf    | 0             | Whether the variant is present in the mother's VCF (1=true, 0=false) |
+| in_father_vcf    | 0             | Whether the variant is present in the father's VCF (1=true, 0=false) |
+| decipher_id      | 999999        | Decipher ID for the proband           |
+| var_type         | "DENOVO-SNP"  | Code for whether the candidate is a SNV (DENOVO-SNP) or indel (DENOVO-INDEL) |
+| ensg             | "ENSG0000001" | Ensembl gene ID                       |
+| enst             | "ENST0000001" | Ensembl transcript ID                 |
+
+#### Definitions for the required columns in the family relationships file
+| name          | example       | definition       |
+| -----------   | ------------- | -----            |
+| family_id     | "FAM100001"   | ID of the family |
+| individual_id | "DDDP100001"  | ID of the proband, matching the person_stable_id of the de novos table |
