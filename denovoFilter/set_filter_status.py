@@ -65,7 +65,7 @@ def subset_de_novos(de_novos):
     
     de_novos = de_novos[["person_stable_id", "gender",
         "mother_stable_id", "father_stable_id", "chrom", "pos", "ref", "alt",
-        "symbol", "var_type", "consequence", "ensg", "enst", "max_af", "pp_dnm",
+        "symbol", "var_type", "consequence", "max_af", "pp_dnm",
         "child_alt_prp", "coding",
         "child_ref_F", "child_ref_R", "child_alt_F", "child_alt_R",
         "mother_ref_F", "mother_ref_R", "mother_alt_F", "mother_alt_R",

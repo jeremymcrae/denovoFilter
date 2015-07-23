@@ -69,8 +69,6 @@ python scripts/filter_de_novos.py \
 | in_father_vcf    | 0             | Whether the variant is present in the father's VCF (1=true, 0=false) |
 | decipher_id      | 999999        | Decipher ID for the proband           |
 | var_type         | "DENOVO-SNP"  | Code for whether the candidate is a SNV (DENOVO-SNP) or indel (DENOVO-INDEL) |
-| ensg             | "ENSG0000001" | Ensembl gene ID                       |
-| enst             | "ENST0000001" | Ensembl transcript ID                 |
 
 #### Definitions for the required columns in the family relationships file
 | name          | example       | definition       |
