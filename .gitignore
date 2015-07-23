@@ -1,5 +1,6 @@
 build/
 dist/
+data/
 *.egg-info/
 results/
 *.pdf

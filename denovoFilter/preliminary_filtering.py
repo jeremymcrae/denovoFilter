@@ -40,7 +40,7 @@ def fix_maf(de_novos):
     
     return max_af
 
-def preliminary_filtering(de_novos):
+def preliminary_filtering(de_novos, sample_fails):
     """run some preliminary filtering of de novos
     
     We want to filter out de novos with high MAF, where they are not present in
@@ -48,6 +48,8 @@ def preliminary_filtering(de_novos):
     
     Args:
         de_novos: dataframe of de novo variants
+        sample_fails: list of IDs for samples who have failed QC checks (due to
+            having too many de novo calls).
     
     Returns:
         data frame of de novos, but where we have excluded sites with high
@@ -59,12 +61,8 @@ def preliminary_filtering(de_novos):
     # keep sites in child vcf, and not in parental vcfs
     de_novos = de_novos[(de_novos["in_child_vcf"] == 1) & (de_novos["in_father_vcf"] == 0) & (de_novos["in_mother_vcf"] == 0)]
     
-    # remove de_novos in samples with >> too many DNMs, focus on too many DNMs at
-    # high quality
-    # NEED TO UPDATE WITH CAROLINE'S NEW SAMPLE FILE LIST, OR USE PRE-FILTERED SET OF DNMS
-    sample_fails = [276227, 258876, 273778, 258921, 272110, 260337, 264083,
-        264084, 269602, 265624]
-    de_novos = de_novos[-de_novos["decipher_id"].isin(sample_fails)]
+    # remove samples with too many candidates
+    de_novos = de_novos[-de_novos["person_stable_id"].isin(sample_fails)]
     
     # Annotate de_novos hitting coding exons or splice sites
     coding_splicing = ["coding_sequence_variant", "frameshift_variant",
