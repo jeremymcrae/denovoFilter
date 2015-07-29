@@ -104,3 +104,32 @@ def get_allele_counts(vars, gene=False):
         values["gene_ref"] = parent_ref
     
     return values
+
+def get_depths_and_proportions(de_novos):
+    """ get the read depths, alt depths and alt proportions for the trio members
+    
+    Args:
+        de_novos: pandas dataframe containing colums of child_ref_F, child alt_R
+            etc
+    
+    Returns:
+        dataframe including additional alt depth, total depth, and alt
+        proportion columns for each trio member.
+    """
+    
+    # get the trio depths
+    de_novos["child_depth"] = de_novos[["child_ref_F", "child_ref_R", "child_alt_F", "child_alt_R"]].sum(axis=1)
+    de_novos["father_depth"] = de_novos[["father_ref_F", "father_ref_R", "father_alt_F", "father_alt_R"]].sum(axis=1)
+    de_novos["mother_depth"] = de_novos[["mother_ref_F", "mother_ref_R", "mother_alt_F", "mother_alt_R"]].sum(axis=1)
+    
+    # get the depth of the alternate alleles
+    de_novos["child_alts"] = de_novos[["child_alt_F", "child_alt_R"]].sum(axis=1)
+    de_novos["father_alts"] = de_novos[["father_alt_F", "father_alt_R"]].sum(axis=1)
+    de_novos["mother_alts"] = de_novos[["mother_alt_F", "mother_alt_R"]].sum(axis=1)
+    
+    # calculate the alt proportions
+    de_novos["child_prp"] = de_novos["child_alts"]/de_novos["child_depth"]
+    de_novos["mother_prp"] = de_novos["mother_alts"]/de_novos["mother_depth"]
+    de_novos["father_prp"] = de_novos["father_alts"]/de_novos["father_depth"]
+    
+    return de_novos
