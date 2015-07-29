@@ -49,9 +49,7 @@ python scripts/filter_de_novos.py \
 | name             | example       | definition                            |
 | -----------      | ------------- | -------------                         |
 | person_stable_id | "DDDP100001"  | ID of the proband                     |
-| gender           | "M"           | sex of the proband (M=male, F=female) |
-| mother_stable_id | "DDDP100002"  | ID of the mother                      |
-| father_stable_id | "DDDP100003"  | ID of the father                      |
+| gender           | "M"           | sex of the proband (M=male, F=female) |                 |
 | chrom            | "1"           | chromosome that the candidate is on   |
 | pos              | 1000001       | nucleotide position of the candidate along the chromosome |
 | ref              | "A"           | base-code for the reference allele    |
