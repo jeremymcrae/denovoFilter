@@ -35,12 +35,12 @@ def fix_maf(de_novos):
     max_af[max_af.str.contains(",")] = 1
     
     # fix the blank and null max AF values
-    max_af[(max_af == "") | (max_af == ".")] = 0
+    max_af[(max_af == "") | (max_af == ".") | (max_af == "missing")] = 0
     max_af = max_af.convert_objects(convert_numeric=True)
     
     return max_af
 
-def preliminary_filtering(de_novos, sample_fails):
+def preliminary_filtering(de_novos, sample_fails=None, maf_cutoff=0.01):
     """run some preliminary filtering of de novos
     
     We want to filter out de novos with high MAF, where they are not present in
@@ -50,19 +50,36 @@ def preliminary_filtering(de_novos, sample_fails):
         de_novos: dataframe of de novo variants
         sample_fails: list of IDs for samples who have failed QC checks (due to
             having too many de novo calls).
+        maf_cutoff: sites have to have a minor allele frequency below this.
     
     Returns:
         data frame of de novos, but where we have excluded sites with high
         allele frequency and where the variant appears in one or more parents.
     """
     max_af = fix_maf(de_novos)
-    de_novos = de_novos[(max_af < 0.01) & max_af.notnull()]
+    de_novos = de_novos[(max_af <= maf_cutoff) & max_af.notnull()]
     
     # keep sites in child vcf, and not in parental vcfs
     de_novos = de_novos[(de_novos["in_child_vcf"] == 1) & (de_novos["in_father_vcf"] == 0) & (de_novos["in_mother_vcf"] == 0)]
     
-    # remove samples with too many candidates
-    de_novos = de_novos[-de_novos["person_stable_id"].isin(sample_fails)]
+    if sample_fails is not None:
+        # remove samples with too many candidates
+        de_novos = de_novos[-de_novos["person_stable_id"].isin(sample_fails)]
+    
+    de_novos = check_coding(de_novos)
+    
+    return de_novos
+
+def check_coding(de_novos, cq_name="consequence"):
+    """check whether the consequence is for a coding consequence
+    
+    Args:
+        de_novos: dataframe of de novo variants
+        cq_name: name of the column for the consequence
+    
+    Returns:
+        data frame with an additional column to show if the site is coding
+    """
     
     # Annotate de_novos hitting coding exons or splice sites
     coding_splicing = ["coding_sequence_variant", "frameshift_variant",
@@ -71,6 +88,6 @@ def preliminary_filtering(de_novos, sample_fails):
         "splice_donor_variant", "splice_region_variant", "start_lost",
         "stop_gained", "stop_lost", "synonymous_variant"]
     
-    de_novos["coding"] = de_novos["consequence"].isin(coding_splicing)
+    de_novos["coding"] = de_novos[cq_name].isin(coding_splicing)
     
     return de_novos
