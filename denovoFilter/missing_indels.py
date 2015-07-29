@@ -19,6 +19,8 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
+import pandas
+
 from denovoFilter.exclude_segdups import exclude_segdups
 from denovoFilter.preliminary_filtering import preliminary_filtering
 from denovoFilter.allele_counts import extract_alt_and_ref_counts, \
