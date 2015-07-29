@@ -62,7 +62,6 @@ python scripts/filter_de_novos.py \
 | dp4_father       | 13,14,0,0     | Read-depths in the father as for dp4_child |
 | pp_dnm           | 0.952         | Posterior probability of de novo mutation from denovogear |
 | max_af           | 0.0001        | Highest allele frequency for alternate allele from reference healthy control population |
-| child_alt_prp    | 0.51          | Proportion of the number of read containing the alternate allele to the total depth |
 | consequence      | "missense_variant" | VEP-annotated consequence for the variant |
 | in_child_vcf     | 1             | Whether the variant is present in the child's VCF (1=true, 0=false) |
 | in_mother_vcf    | 0             | Whether the variant is present in the mother's VCF (1=true, 0=false) |
