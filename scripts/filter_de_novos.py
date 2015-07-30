@@ -85,6 +85,9 @@ def main():
     
     # load the datasets
     de_novos = pandas.read_table(args.de_novos, na_filter=False)
+    families = pandas.read_table(args.families)
+    de_novos = de_novos.merge(families, how="left", left_on="person_stable_id", right_on="individual_id")
+    
     sample_fails = [ x.strip() for x in open(args.sample_fails) ]
     
     # run some initial screening, and annotate sites with ref and alt depths

@@ -50,7 +50,6 @@ def load_missing_indels(candidates_path, families_path):
     # get the proband sex
     families = pandas.read_table(families_path, na_filter=False)
     missed = missed.merge(families, how="left", left_on="person_stable_id", right_on="individual_id")
-    missed["gender"] = missed["sex"]
     
     return missed
 

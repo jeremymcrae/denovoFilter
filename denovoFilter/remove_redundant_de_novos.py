@@ -37,26 +37,6 @@ consequences = ["transcript_ablation", "splice_donor_variant",
     "intergenic_variant"]
 severity = pandas.DataFrame({"consequence": consequences, "rank": range(len(consequences))})
 
-def open_ddd_families(path):
-    """ opens a file defining the DDD individuals, and their families
-
-    This gives us family information, so that we can identify siblings within a
-    family. We need to know this as sometimes de novo events recur within
-    families, so we have to remove all except for one, to prevent over-counting
-    the de novos.
-
-    Args:
-        path: path to a PED file listing all the trios
-
-    Returns:
-        dataframe of families information
-    """
-    
-    families = pandas.read_table(path)
-    families = families[["family_id", "individual_id"]]
-    
-    return families
-
 def get_most_severe(consequences):
     """ get the most severe consequence from a list of VEP consequences
     
@@ -133,17 +113,13 @@ def get_independent_de_novos(de_novos, trios_path):
     
     Args:
         de_novos: dataframe of de novo variants
-        trios_path: path to a PED file listing all the trios
+        trios_path
     
     Returns:
         dataframe with duplicated sites removed
     """
     
-    families = open_ddd_families(trios_path)
-    
-    # merge the family IDs with the de novo events, sort the de novos first, so
-    # that we can correctly match to the duplicate status
-    de_novos = de_novos.sort("person_stable_id")
+    families = pandas.read_table(trios_path, na_filter=False)
     families = de_novos.merge(families, how="left", left_on="person_stable_id", right_on="individual_id")
     
     # get the family ID, and de novo coordinates, which are sufficient to
