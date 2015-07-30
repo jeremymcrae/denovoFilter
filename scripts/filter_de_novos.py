@@ -33,10 +33,13 @@ from denovoFilter.allele_counts import extract_alt_and_ref_counts, \
 from denovoFilter.site_deviations import test_sites, test_genes
 from denovoFilter.set_filter_status import get_filter_status, subset_de_novos
 from denovoFilter.remove_redundant_de_novos import get_independent_de_novos
+from denovoFilter.missing_indels import filter_missing_indels, load_missing_indels
 
 DE_NOVOS_PATH = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13/denovo_gear_trios_extracted_passed_variants_11.05.15.tsv"
+MISSED_INDELS_PATH = "/nfs/users/nfs_j/jm33/apps/denovoFilter/data/missed_denovo_indels_datafreeze_2015-04-13.txt"
 FAMILIES_PATH = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13/family_relationships.txt"
 FAIL_PATH = "/nfs/users/nfs_j/jm33/apps/denovoFilter/data/sample_fails.txt"
+INDEL_FAILS_PATH = "/nfs/users/nfs_j/jm33/apps/denovoFilter/data/sample_fails_missed_indels.txt"
 OUTPUT_PATH = "de_novos.ddd_4k.ddd_only.txt"
 
 def get_options():
@@ -47,9 +50,14 @@ def get_options():
         variants for sites with good characteristics.")
     parser.add_argument("--de-novos", default=DE_NOVOS_PATH, \
         help="Path to file listing candidate de novos.")
+    parser.add_argument("--de-novos-indels", default=MISSED_INDELS_PATH, \
+        help="Path to file listing candidate de novos indels (not found in \
+            the standard de novo filtering).")
     parser.add_argument("--families", default=FAMILIES_PATH, \
         help="Path to file listing family relationships (PED file).")
     parser.add_argument("--sample-fails", default=FAIL_PATH, \
+        help="Path to file listing family relationships (PED file).")
+    parser.add_argument("--sample-fails-indels", default=INDEL_FAILS_PATH, \
         help="Path to file listing family relationships (PED file).")
     parser.add_argument("--output", default=OUTPUT_PATH, \
         help="Path to file for filtered de novos.")
@@ -57,6 +65,20 @@ def get_options():
     args = parser.parse_args()
     
     return args
+
+def include_missing_indels(de_novos, indels_path, fails_path, families_path):
+    """ load and filter the missing candidate indels
+    """
+    
+    # load the missing indels datasets and filter for good quality sites
+    missing_indels = load_missing_indels(indels_path, families_path)
+    sample_fails = [ x.strip() for x in open(fails_path) ]
+    missing_indels = filter_missing_indels(missing_indels, sample_fails)
+    missing_indels = subset_de_novos(missing_indels)
+    
+    de_novos = de_novos.append(missing_indels)
+    
+    return de_novos
 
 def main():
     args = get_options()
@@ -81,8 +103,10 @@ def main():
     passed = de_novos[(pass_status & de_novos["coding"])]
     
     passed = subset_de_novos(passed)
-    passed = get_independent_de_novos(passed, args.families)
+    if args.de_novos_indels is not None:
+        passed = include_missing_indels(passed, args.de_novos_indels, args.sample_fails_indels, args.families)
     
+    passed = get_independent_de_novos(passed, args.families)
     passed.to_csv(args.output, sep= "\t", index=False)
 
 if __name__ == '__main__':
