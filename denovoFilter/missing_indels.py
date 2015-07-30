@@ -82,6 +82,7 @@ def filter_missing_indels(candidates, sample_fails):
     
     # apply the filtering criteria for the missing indels
     candidates = candidates[candidates["child_alts"] > 2]
+    candidates = candidates[candidates["min_parent_alt"] < 2]
     candidates = candidates[candidates["min_parent_depth"] > 7]
     candidates = candidates[candidates["max_parental_proportion"] < 0.1]
     candidates = candidates[candidates["child_prp"] > 0.2]
