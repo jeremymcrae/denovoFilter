@@ -20,6 +20,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
 import pandas
+import numpy
 
 consequences = ["transcript_ablation", "splice_donor_variant",
     "splice_acceptor_variant", "stop_gained", "frameshift_variant",
@@ -75,8 +76,8 @@ def remove_within_person_recurrences(de_novos):
     """
     
     # find the variants which are recurrent within a person in a single gene
-    from_start = de_novos[["person_stable_id", "symbol"]].duplicated()
-    from_end = de_novos[["person_stable_id", "symbol"]].duplicated(take_last=True)
+    from_start = de_novos.duplicated(["person_stable_id", "symbol"])
+    from_end = de_novos.duplicated(["person_stable_id", "symbol"], take_last=True)
     
     person_dups = from_start | from_end
     in_person_dups = de_novos[person_dups]
@@ -84,23 +85,18 @@ def remove_within_person_recurrences(de_novos):
     # split the dataset, so we can process gene by gene
     genes = in_person_dups.groupby(["person_stable_id", "symbol"])
     
-    # construct a blank dataframe to add rows to
-    dups = pandas.DataFrame(columns=in_person_dups.columns)
-    dups["most_severe"] = False
-    dups["exclude"] = False
-    
     # pick a variant for each person, ie the first of the most severe consequence
-    # This code is awkwardly written, perhaps there is a simpler way to express
-    # this.
+    exclude = pandas.Series([], dtype=numpy.bool_)
     for key, gene in genes:
-        gene["most_severe"] = gene["consequence"] == get_most_severe(gene["consequence"])
-        gene["exclude"] = True
-        gene["exclude"][gene["most_severe"]] = False
-        gene["exclude"][gene["most_severe"][1:].index] = True
-        dups = dups.append(gene)
+        consequence = get_most_severe(gene["consequence"])
+        first = gene[gene["consequence"] == consequence].index[0]
+        
+        gene_exclude = pandas.Series([True] * len(gene), index=gene.index)
+        gene_exclude[first] = False
+        exclude = exclude.append(gene_exclude)
     
     # remove the selected de novos
-    person_dups[person_dups] = dups["exclude"]
+    person_dups.loc[exclude.index] = exclude
     de_novos = de_novos[-person_dups]
     
     return de_novos
