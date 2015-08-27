@@ -34,12 +34,14 @@ from denovoFilter.site_deviations import test_sites, test_genes
 from denovoFilter.set_filter_status import get_filter_status, subset_de_novos
 from denovoFilter.remove_redundant_de_novos import get_independent_de_novos
 from denovoFilter.missing_indels import filter_missing_indels, load_missing_indels
+from denovoFilter.change_last_base_sites import change_conserved_last_base_consequence
 
 DE_NOVOS_PATH = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13/denovo_gear_trios_extracted_passed_variants_11.05.15.tsv"
 MISSED_INDELS_PATH = "/nfs/users/nfs_j/jm33/apps/denovoFilter/data/missed_denovo_indels_datafreeze_2015-04-13.txt"
 FAMILIES_PATH = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13/family_relationships.txt"
 FAIL_PATH = "/nfs/users/nfs_j/jm33/apps/denovoFilter/data/sample_fails.txt"
 INDEL_FAILS_PATH = "/nfs/users/nfs_j/jm33/apps/denovoFilter/data/sample_fails_missed_indels.txt"
+LAST_BASE_PATH = "/lustre/scratch113/projects/ddd/users/jm33/last_base_sites_G.json"
 OUTPUT_PATH = "de_novos.ddd_4k.ddd_only.txt"
 
 def get_options():
@@ -59,6 +61,8 @@ def get_options():
         help="Path to file listing family relationships (PED file).")
     parser.add_argument("--sample-fails-indels", default=INDEL_FAILS_PATH, \
         help="Path to file listing family relationships (PED file).")
+    parser.add_argument("--last-base-sites", default=LAST_BASE_PATH, \
+        help="Path to file of all conserved last base of exon sites in genome.")
     parser.add_argument("--output", default=OUTPUT_PATH, \
         help="Path to file for filtered de novos.")
     
@@ -108,6 +112,8 @@ def main():
     passed = subset_de_novos(passed)
     if args.de_novos_indels is not None:
         passed = include_missing_indels(passed, args.de_novos_indels, args.sample_fails_indels, args.families)
+    
+    passed = change_conserved_last_base_consequence(passed, args.last_base_sites)
     
     passed = get_independent_de_novos(passed, args.families)
     passed.to_csv(args.output, sep= "\t", index=False)
