@@ -42,7 +42,14 @@ top_genes_path = "/lustre/scratch113/projects/ddd/users/jm33/enriched_genes.ddd_
 outpath = "/lustre/scratch113/projects/ddd/users/jm33/de_novos.validation_results.2015-09-22.txt"
 
 def load_de_novo_calls(path):
-    """
+    """ load a dataset of filtered de novo calls
+    
+    Args:
+        path: path to de novo candidates dataset
+    
+    Returns:
+        pandas dataframe of candidate de novos, restricted to to most pertinent
+        columns.
     """
     
     de_novos = pandas.read_table(path)
@@ -63,6 +70,12 @@ def load_de_novo_calls(path):
 
 def load_ddd_1k_validations(path):
     """ load the data for the DDD 1K validation efforts
+    
+    Args:
+        path: path to dataset for DDD 1K validation results
+    
+    Returns:
+        pandas dataframe of candidates, restricted to specific columns
     """
     
     validations = pandas.read_table(path, sep="\t")
@@ -89,6 +102,12 @@ def load_ddd_1k_validations(path):
 
 def load_ddd_4k_validations(path):
     """ load the data for the DDD 4K validation efforts
+    
+    Args:
+        path: path to dataset for DDD 4K validation results
+    
+    Returns:
+        pandas dataframe of candidates, restricted to specific columns
     """
     
     validations = pandas.read_excel(path, sheetname="for_Jeremy")
@@ -162,6 +181,16 @@ def find_matching_site(row, de_novos):
 def fix_incorrect_positions(validations, de_novos):
     """ fix the indels with incorrect positions, by comparing them to the sites
     submitted for validations
+    
+    Args:
+        validations: pandas dataframe of validation results, where some have
+            been swapped to incorrect coordinates.
+        de_novos: pandas dataframe of all de novo candidate, so we can match the
+            original call coordinates.
+    
+    Returns:
+        pandas DataFrame of validations. where the sites with incorrect
+        positions have been fixed.
     """
     
     # merge the de novo dataset, which includes a HGNC symbol for each candidate
