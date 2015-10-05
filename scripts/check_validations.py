@@ -21,25 +21,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import os
 
-import matplotlib
-matplotlib.use("Agg")
-from matplotlib import pyplot
-
 import pandas
-import seaborn
-
-# define the plot style
-seaborn.set_context("notebook", font_scale=2)
-seaborn.set_style("white", {"ytick.major.size": 10, "xtick.major.size": 10})
 
 user_dir = os.path.expanduser("~")
 
 ddd_1k_validations_path = "/nfs/ddd0/Data/datafreeze/1133trios_20131218/DNG_Validation_1133trios_20140130.tsv"
 ddd_4k_validations_path = os.path.join(user_dir, "de_novos.ddd_4k.validation_results.2015-09-02.xlsx")
-# de_novos_path = os.path.join(user_dir, "de_novos_for_validation.txt")
+ddd_4k_low_pp_dnm_validations_path = os.path.join(user_dir, "de_novos.ddd_4k.validation_results.low_pp_dnm.2015-10-02.xlsx")
 de_novos_path = "/lustre/scratch113/projects/ddd/users/jm33/de_novos.ddd_4k.ddd_only.2015-09-02.txt"
-top_genes_path = "/lustre/scratch113/projects/ddd/users/jm33/enriched_genes.ddd_4k.2015-02-02.tsv"
-outpath = "/lustre/scratch113/projects/ddd/users/jm33/de_novos.validation_results.2015-09-22.txt"
+outpath = "/lustre/scratch113/projects/ddd/users/jm33/de_novos.validation_results.2015-10-05.txt"
 
 def load_de_novo_calls(path):
     """ load a dataset of filtered de novo calls
@@ -147,6 +137,44 @@ def load_ddd_4k_validations(path):
     
     return validations
 
+def load_ddd_4k_low_pp_dnm_validations(path, de_novos):
+    """ load the data for the DDD 4K low pp_dnm validation efforts
+    
+    Args:
+        path: path to dataset for DDD 4K validation results
+    
+    Returns:
+        pandas dataframe of candidates, restricted to specific columns
+    """
+    
+    validations = pandas.read_excel(path, sheetname="Summary_Final_forDB")
+    # make sure the chromosome columns are string types
+    validations["chrom"] = validations["CHR"].astype("str")
+    validations["person_id"] = validations["ID"]
+    validations["start_pos"] = validations["POS"]
+    
+    validations = validations.merge(de_novos, how="left",
+        on=["person_id", "chrom", "start_pos"])
+    
+    validations["end_pos"] = validations["start_pos"] + validations["ref_allele"].str.len() - 1
+    
+    # recode the validation status
+    validations["status"] = validations["manual_score"]
+    
+    recode = {"dnm" : "de_novo",
+        "dnm_low_alt": "de_novo",
+        "fp": "false_positive",
+        "inherited_pat": "inherited",
+        "parental_mosaic": "de_novo",
+        "p/u": "uncertain",
+        "unclear": "uncertain"}
+    validations["status"] = validations["status"].map(recode)
+    
+    validations = validations[["person_id", "chrom", "start_pos", "end_pos", \
+        "ref_allele", "alt_allele", "status"]]
+    
+    return validations
+
 def find_matching_site(row, de_novos):
     """ this identifies the correct position for variants
     
@@ -231,27 +259,48 @@ def count_validated_per_gene(validations):
     
     return counts
 
-def plot_validated_per_gene(counts):
-    """
+def remove_duplicates(validations):
+    """ removes duplicate validations
+    
+    Args:
+        validations: dataframe of validation data
+    
+    Returns:
+        dataframe of validation data with duplicate rows removed, and where
+        duplicates exist, we check if at leats one of the pair has been validated.
     """
     
-    counts["3+ candidates"] = counts["total"] > counts["total"].median()
+    columns = ["person_id", "chrom", "start_pos"]
+    first = validations.duplicated(take_last=False, cols=columns)
+    second = validations.duplicated(take_last=True, cols=columns)
+    dups = validations[first | second]
+    without_dups = validations[~(first | second)]
     
-    # plot the proportion of candidates validated per gene
-    fig = seaborn.FacetGrid(counts, col="3+ candidates", size=6)
-    fig.map(pyplot.hist, "proportion")
-    fig.set_xlabels("validated per gene")
-    fig.set_ylabels("Frequency")
-    fig.savefig("proportion_validated.pdf", format="pdf")
+    # some of the duplicates have different validation status codes, such as one
+    # being annotated a "uncertain, while the other is annotated as "de_novo".
+    # We want to capture if at least on of the pair is "de_novo".
+    fixed = pandas.DataFrame(columns=dups.columns)
+    for key, x in dups.groupby(["person_id", "chrom", "start_pos"]):
+        row = dict(x.iloc[0])
+        if "de_novo" in list(x["status"]):
+            row["status"] = "de_novo"
+        fixed = fixed.append(row, ignore_index=True)
+    
+    validations = without_dups.append(fixed)
+    
+    return(validations)
 
 def main():
     de_novos = load_de_novo_calls(de_novos_path)
-    top_genes = pandas.read_table(top_genes_path)
     
     ddd_1k_results = load_ddd_1k_validations(ddd_1k_validations_path)
     ddd_4k_results = load_ddd_4k_validations(ddd_4k_validations_path)
     ddd_4k_results = fix_incorrect_positions(ddd_4k_results, de_novos)
     validations = ddd_4k_results.append(ddd_1k_results)
+    
+    low_pp_dnm = load_ddd_4k_low_pp_dnm_validations(ddd_4k_low_pp_dnm_validations_path, de_novos)
+    validations = validations.append(low_pp_dnm)
+    validations = remove_duplicates(validations)
     
     # merge the de novo dataset, which includes a HGNC symbol for each candidate
     validations = validations.merge(de_novos, how="left", \
@@ -260,9 +309,6 @@ def main():
     validations = validations[["person_id", "chrom", "start_pos", "end_pos", \
         "ref_allele", "alt_allele", "hgnc", "consequence", "status"]]
     validations.to_csv(outpath, sep="\t", index=False)
-    
-    # counts = count_validated_per_gene(validations)
-    # plot_validated_per_gene(counts)
 
 if __name__ == '__main__':
     main()
