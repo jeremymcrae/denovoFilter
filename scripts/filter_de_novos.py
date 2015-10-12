@@ -22,6 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 from __future__ import absolute_import
 
 import argparse
+from datetime import date
 
 import pandas
 
@@ -42,7 +43,7 @@ FAMILIES_PATH = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13/family_r
 FAIL_PATH = "/nfs/users/nfs_j/jm33/apps/denovoFilter/data/sample_fails.txt"
 INDEL_FAILS_PATH = "/nfs/users/nfs_j/jm33/apps/denovoFilter/data/sample_fails_missed_indels.txt"
 LAST_BASE_PATH = "/lustre/scratch113/projects/ddd/users/jm33/last_base_sites_G.json"
-OUTPUT_PATH = "de_novos.ddd_4k.ddd_only.txt"
+OUTPUT_PATH = "/lustre/scratch113/projects/ddd/users/jm33/de_novos.ddd_4k.ddd_only.{}.txt".format(str(date.today()))
 
 def get_options():
     """ get the command line options

@@ -21,6 +21,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import os
 
+from datetime import date
+
 import pandas
 
 user_dir = os.path.expanduser("~")
@@ -28,8 +30,8 @@ user_dir = os.path.expanduser("~")
 ddd_1k_validations_path = "/nfs/ddd0/Data/datafreeze/1133trios_20131218/DNG_Validation_1133trios_20140130.tsv"
 ddd_4k_validations_path = os.path.join(user_dir, "de_novos.ddd_4k.validation_results.2015-09-02.xlsx")
 ddd_4k_low_pp_dnm_validations_path = os.path.join(user_dir, "de_novos.ddd_4k.validation_results.low_pp_dnm.2015-10-02.xlsx")
-de_novos_path = "/lustre/scratch113/projects/ddd/users/jm33/de_novos.ddd_4k.ddd_only.2015-09-02.txt"
-outpath = "/lustre/scratch113/projects/ddd/users/jm33/de_novos.validation_results.2015-10-05.txt"
+de_novos_path = "/lustre/scratch113/projects/ddd/users/jm33/de_novos.ddd_4k.ddd_only.2015-10-12.txt"
+outpath = "/lustre/scratch113/projects/ddd/users/jm33/de_novos.validation_results.{}.txt".format(str(date.today()))
 
 def load_de_novo_calls(path):
     """ load a dataset of filtered de novo calls
