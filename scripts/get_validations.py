@@ -20,18 +20,38 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
 import os
+import argparse
 
 from datetime import date
 
 import pandas
 
-user_dir = os.path.expanduser("~")
-
-ddd_1k_validations_path = "/nfs/ddd0/Data/datafreeze/1133trios_20131218/DNG_Validation_1133trios_20140130.tsv"
-ddd_4k_validations_path = os.path.join(user_dir, "de_novos.ddd_4k.validation_results.2015-09-02.xlsx")
-ddd_4k_low_pp_dnm_validations_path = os.path.join(user_dir, "de_novos.ddd_4k.validation_results.low_pp_dnm.2015-10-02.xlsx")
-de_novos_path = "/lustre/scratch113/projects/ddd/users/jm33/de_novos.ddd_4k.ddd_only.2015-10-12.txt"
-outpath = "/lustre/scratch113/projects/ddd/users/jm33/de_novos.validation_results.{}.txt".format(str(date.today()))
+def get_options():
+    """ get the command line options
+    """
+    
+    parser = argparse.ArgumentParser(description="Generate a table of all the"
+        "validations results.")
+    parser.add_argument("--ddd-1k-validations", \
+        default="/nfs/ddd0/Data/datafreeze/1133trios_20131218/DNG_Validation_1133trios_20140130.tsv", \
+        help="Path to file listing candidate de novos.")
+    parser.add_argument("--ddd-4k-validations", \
+        default="/nfs/users/nfs_j/jm33/de_novos.ddd_4k.validation_results.2015-09-02.xlsx", \
+        help="Path to file listing candidate de novos indels (not found in \
+            the standard de novo filtering).")
+    parser.add_argument("--low-pp-dnm", \
+        default="/nfs/users/nfs_j/jm33/de_novos.ddd_4k.validation_results.low_pp_dnm.2015-10-02.xlsx", \
+        help="Path to file listing family relationships (PED file).")
+    parser.add_argument("--de-novos", \
+        default="/lustre/scratch113/projects/ddd/users/jm33/de_novos.ddd_4k.ddd_only.2015-10-12.txt", \
+        help="Path to file listing family relationships (PED file).")
+    parser.add_argument("--output", \
+        default="/lustre/scratch113/projects/ddd/users/jm33/de_novos.validation_results.{}.txt".format(str(date.today())), \
+        help="Path to file for filtered de novos.")
+    
+    args = parser.parse_args()
+    
+    return args
 
 def load_de_novo_calls(path):
     """ load a dataset of filtered de novo calls
@@ -293,14 +313,15 @@ def remove_duplicates(validations):
     return(validations)
 
 def main():
-    de_novos = load_de_novo_calls(de_novos_path)
+    args = get_options()
+    de_novos = load_de_novo_calls(args.de_novos)
     
-    ddd_1k_results = load_ddd_1k_validations(ddd_1k_validations_path)
-    ddd_4k_results = load_ddd_4k_validations(ddd_4k_validations_path)
+    ddd_1k_results = load_ddd_1k_validations(args.ddd_1k_validations)
+    ddd_4k_results = load_ddd_4k_validations(args.ddd_4k_validations)
     ddd_4k_results = fix_incorrect_positions(ddd_4k_results, de_novos)
     validations = ddd_4k_results.append(ddd_1k_results)
     
-    low_pp_dnm = load_ddd_4k_low_pp_dnm_validations(ddd_4k_low_pp_dnm_validations_path, de_novos)
+    low_pp_dnm = load_ddd_4k_low_pp_dnm_validations(args.ddd_4k_low_pp_dnm, de_novos)
     validations = validations.append(low_pp_dnm)
     validations = remove_duplicates(validations)
     
@@ -310,7 +331,7 @@ def main():
     
     validations = validations[["person_id", "chrom", "start_pos", "end_pos", \
         "ref_allele", "alt_allele", "hgnc", "consequence", "status"]]
-    validations.to_csv(outpath, sep="\t", index=False)
+    validations.to_csv(args.output, sep="\t", index=False)
 
 if __name__ == '__main__':
     main()
