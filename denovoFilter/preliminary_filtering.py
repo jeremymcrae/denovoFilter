@@ -64,7 +64,8 @@ def preliminary_filtering(de_novos, sample_fails=None, maf_cutoff=0.01):
     
     if sample_fails is not None:
         # remove samples with too many candidates
-        de_novos = de_novos[-de_novos["person_stable_id"].isin(sample_fails)]
+        in_sample_fails = de_novos["person_stable_id"].isin(sample_fails)
+        de_novos = de_novos[~in_sample_fails]
     
     de_novos = check_coding(de_novos)
     
