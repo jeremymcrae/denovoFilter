@@ -321,7 +321,7 @@ def main():
     ddd_4k_results = fix_incorrect_positions(ddd_4k_results, de_novos)
     validations = ddd_4k_results.append(ddd_1k_results)
     
-    low_pp_dnm = load_ddd_4k_low_pp_dnm_validations(args.ddd_4k_low_pp_dnm, de_novos)
+    low_pp_dnm = load_ddd_4k_low_pp_dnm_validations(args.low_pp_dnm, de_novos)
     validations = validations.append(low_pp_dnm)
     validations = remove_duplicates(validations)
     
