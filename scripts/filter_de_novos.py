@@ -38,10 +38,10 @@ from denovoFilter.missing_indels import filter_missing_indels, load_missing_inde
 from denovoFilter.change_last_base_sites import change_conserved_last_base_consequence
 
 DE_NOVOS_PATH = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13/denovo_gear_trios_extracted_passed_variants_11.05.15.tsv"
-MISSED_INDELS_PATH = "/nfs/users/nfs_j/jm33/apps/denovoFilter/data/missed_denovo_indels_datafreeze_2015-04-13.txt"
+MISSED_INDELS_PATH = "/lustre/scratch113/projects/ddd/users/jm33/de_novo_data/missed_denovo_indels_datafreeze_2015-04-13.txt"
 FAMILIES_PATH = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13/family_relationships.txt"
-FAIL_PATH = "/nfs/users/nfs_j/jm33/apps/denovoFilter/data/sample_fails.txt"
-INDEL_FAILS_PATH = "/nfs/users/nfs_j/jm33/apps/denovoFilter/data/sample_fails_missed_indels.txt"
+FAIL_PATH = "/lustre/scratch113/projects/ddd/users/jm33/de_novo_data/de_novo_sample_fails.txt"
+INDEL_FAILS_PATH = "/lustre/scratch113/projects/ddd/users/jm33/de_novo_data/de_novo_sample_fails_missed_indels.txt"
 LAST_BASE_PATH = "/lustre/scratch113/projects/ddd/users/jm33/last_base_sites_G.json"
 OUTPUT_PATH = "/lustre/scratch113/projects/ddd/users/jm33/de_novos.ddd_4k.ddd_only.{}.txt".format(str(date.today()))
 
