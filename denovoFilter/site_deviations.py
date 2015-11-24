@@ -75,7 +75,7 @@ def test_sites(de_novos):
     # check for strand bias by fishers exact test on the allele counts
     results["SB_pval"] = results.apply(site_strand_bias, axis=1)
     
-    de_novos = de_novos.merge(results)
+    de_novos = de_novos.merge(results, how="left")
     
     return de_novos
 
@@ -92,7 +92,7 @@ def test_genes(de_novos):
     
     # exclude de novo SNVs that fail the strand bias filter, otherwise these
     # skew the parental alts within genes
-    sites = de_novos[-(de_novos["SB_pval"] < P_CUTOFF) & (de_novos["var_type"] == "DENOVO-SNP")]
+    sites = de_novos[~(de_novos["SB_pval"] < P_CUTOFF) & (de_novos["var_type"] == "DENOVO-SNP")]
     
     # loop to calculate gene-specific PA values after SB filtering
     sites = sites[["symbol",
@@ -112,6 +112,6 @@ def test_genes(de_novos):
     parent_counts = pandas.DataFrame({"alt": results["gene_alt"], "ref": results["gene_ref"]})
     results["PA_pval_gene"] = parent_counts.apply(scipy.stats.binom_test, axis=1, p=ERROR_RATE)
     
-    de_novos = de_novos.merge(results)
+    de_novos = de_novos.merge(results, how="left")
     
     return de_novos
