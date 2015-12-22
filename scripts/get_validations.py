@@ -25,6 +25,7 @@ import argparse
 from datetime import date
 
 import pandas
+import numpy
 
 def get_options():
     """ get the command line options
@@ -36,11 +37,11 @@ def get_options():
         default="/nfs/ddd0/Data/datafreeze/1133trios_20131218/DNG_Validation_1133trios_20140130.tsv", \
         help="Path to file listing candidate de novos.")
     parser.add_argument("--ddd-4k-validations", \
-        default="/nfs/users/nfs_j/jm33/de_novos.ddd_4k.validation_results.2015-09-02.xlsx", \
+        default="/lustre/scratch113/projects/ddd/users/jm33/de_novo_data/de_novos.ddd_4k.validation_results.2015-12-22.xlsx", \
         help="Path to file listing candidate de novos indels (not found in \
             the standard de novo filtering).")
     parser.add_argument("--low-pp-dnm", \
-        default="/nfs/users/nfs_j/jm33/de_novos.ddd_4k.validation_results.low_pp_dnm.2015-10-02.xlsx", \
+        default="/lustre/scratch113/projects/ddd/users/jm33/de_novo_data/de_novos.ddd_4k.validation_results.low_pp_dnm.2015-10-02.xlsx", \
         help="Path to file listing family relationships (PED file).")
     parser.add_argument("--de-novos", \
         default="/lustre/scratch113/projects/ddd/users/jm33/de_novos.ddd_4k.ddd_only.2015-10-12.txt", \
@@ -73,6 +74,7 @@ def load_de_novo_calls(path):
     
     de_novos["chrom"] = de_novos["chrom"].astype("str")
     de_novos["end_pos"] = de_novos["start_pos"] + de_novos["ref_allele"].str.len() - 1
+    
     
     de_novos = de_novos[['person_id', 'sex', 'chrom', 'start_pos', 'end_pos',
         'ref_allele', 'alt_allele', 'hgnc', 'var_type', 'consequence', 'max_af',
@@ -140,6 +142,8 @@ def load_ddd_4k_validations(path):
     recode = {"did not validate (pcr/seq fail in child)" : "uncertain",
         "did not validate (pcr/seq fail in child and mum)": "uncertain",
         "dnm": "de_novo", "DNM": "de_novo", "DNM ": "de_novo",
+        "DNM child mosaic": "de_novo",
+        "DNM parental mosaic": "de_novo",
         "DNM mosaic?": "de_novo",
         "DNM mosaic in mother": "de_novo",
         "DNM mosaic in father": "de_novo",
@@ -175,7 +179,7 @@ def load_ddd_4k_low_pp_dnm_validations(path, de_novos):
     validations["person_id"] = validations["ID"]
     validations["start_pos"] = validations["POS"]
     
-    validations = validations.merge(de_novos, how="left",
+    validations = validations.merge(de_novos, how="inner",
         on=["person_id", "chrom", "start_pos"])
     
     validations["end_pos"] = validations["start_pos"] + validations["ref_allele"].str.len() - 1
@@ -222,9 +226,9 @@ def find_matching_site(row, de_novos):
     matches = rows.delta < rows.ref_allele.str.len()
     
     if sum(matches) > 1:
-        return None
+        return -9999999
     elif sum(matches) == 0:
-        return None
+        return -9999999
     
     return int(rows[matches].start_pos)
 
@@ -250,7 +254,7 @@ def fix_incorrect_positions(validations, de_novos):
     # some of the sites have changed positions during the validation efforts
     missing = validations[validations.var_type.isnull()]
     correct_positions = missing.apply(find_matching_site, axis=1, de_novos=de_novos)
-    validations.start_pos[validations.var_type.isnull()] = correct_positions
+    validations.start_pos[validations.var_type.isnull()][correct_positions > 0] = correct_positions[correct_positions > 0]
     
     validations = validations[["person_id", "chrom", "start_pos", "end_pos", "ref_allele", \
         "alt_allele", "status"]]
@@ -289,7 +293,7 @@ def remove_duplicates(validations):
     
     Returns:
         dataframe of validation data with duplicate rows removed, and where
-        duplicates exist, we check if at leats one of the pair has been validated.
+        duplicates exist, we check if at least one of the pair has been validated.
     """
     
     columns = ["person_id", "chrom", "start_pos"]
