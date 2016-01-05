@@ -108,11 +108,14 @@ def main():
     
     # get the variants that pass the filtering criteria
     pass_status = get_filter_status(de_novos)
-    passed = de_novos[(pass_status & de_novos["coding"])]
+    passed = de_novos[pass_status]
     
     passed = subset_de_novos(passed)
     if args.de_novos_indels is not None:
         passed = include_missing_indels(passed, args.de_novos_indels, args.sample_fails_indels, args.families)
+    
+    # make sure we are only looking at sites within coding regions
+    passed = passed[passed["coding"]]
     
     passed = change_conserved_last_base_consequence(passed, args.last_base_sites)
     

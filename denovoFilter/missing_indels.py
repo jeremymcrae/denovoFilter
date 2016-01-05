@@ -86,7 +86,4 @@ def filter_missing_indels(candidates, sample_fails):
     candidates = candidates[candidates["max_parental_proportion"] < 0.1]
     candidates = candidates[candidates["child_prp"] > 0.2]
     
-    # make sure we are only looking at sites within coding regions
-    candidates = candidates[candidates["coding"]]
-    
     return subset_de_novos(candidates)
