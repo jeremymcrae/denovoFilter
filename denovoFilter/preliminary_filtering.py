@@ -19,17 +19,18 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
-def fix_maf(de_novos):
+def fix_maf(max_af):
     """ cleans up the max AF entries in the de novo dataframe
     
     Args:
-        de_novos: DataFrame of candidate de novos, include a column of "max_af"
+        max_af: pandas Series of maximum allele frequencies from the table of
+            candidate de novos.
     
     Returns:
-        column of max_af values
+        modified pandas Series of max_af values
     """
     
-    max_af = de_novos["max_af"].copy()
+    max_af = max_af.copy()
     
     # one de novo has a comma separated list of MAF values (both above 0.1)
     max_af[max_af.str.contains(",")] = 1
@@ -41,7 +42,7 @@ def fix_maf(de_novos):
     return max_af
 
 def preliminary_filtering(de_novos, sample_fails=None, maf_cutoff=0.01):
-    """run some preliminary filtering of de novos
+    """run some preliminary filtering of de novos.
     
     We want to filter out de novos with high MAF, where they are not present in
     the child VCF, or are present in the parental VCFs
@@ -56,18 +57,19 @@ def preliminary_filtering(de_novos, sample_fails=None, maf_cutoff=0.01):
         data frame of de novos, but where we have excluded sites with high
         allele frequency and where the variant appears in one or more parents.
     """
-    max_af = fix_maf(de_novos)
-    de_novos = de_novos[(max_af <= maf_cutoff) & max_af.notnull()]
+    
+    max_af = fix_maf(de_novos['max_af'])
+    passes_maf = (max_af <= maf_cutoff) & max_af.notnull()
     
     # keep sites in child vcf, and not in parental vcfs
-    de_novos = de_novos[(de_novos["in_child_vcf"] == 1) & (de_novos["in_father_vcf"] == 0) & (de_novos["in_mother_vcf"] == 0)]
+    appears_de_novo = (de_novos["in_child_vcf"] == 1) & (de_novos["in_father_vcf"] == 0) & (de_novos["in_mother_vcf"] == 0)
     
+    good_samples = [True] * len(de_novos)
     if sample_fails is not None:
         # remove samples with too many candidates
-        in_sample_fails = de_novos["person_stable_id"].isin(sample_fails)
-        de_novos = de_novos[~in_sample_fails]
+        good_samples = ~de_novos["person_stable_id"].isin(sample_fails)
     
-    de_novos = check_coding(de_novos)
+    de_novos = de_novos[passes_maf & appears_de_novo & good_samples]
     
     return de_novos
 
@@ -82,13 +84,12 @@ def check_coding(de_novos, cq_name="consequence"):
         data frame with an additional column to show if the site is coding
     """
     
-    # Annotate de_novos hitting coding exons or splice sites
+    # annotate candidates within coding exons or splice sites
     coding_splicing = ["coding_sequence_variant", "frameshift_variant",
         "inframe_deletion", "inframe_insertion", "initiator_codon_variant",
         "missense_variant", "protein_altering_variant", "splice_acceptor_variant",
         "splice_donor_variant", "splice_region_variant", "start_lost",
-        "stop_gained", "stop_lost", "synonymous_variant"]
+        "stop_gained", "stop_lost", "synonymous_variant",
+        'conserved_exon_terminus_variant']
     
-    de_novos["coding"] = de_novos[cq_name].isin(coding_splicing)
-    
-    return de_novos
+    return de_novos[cq_name].isin(coding_splicing)

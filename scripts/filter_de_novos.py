@@ -49,56 +49,54 @@ def get_options():
     """ get the command line options
     """
     
-    parser = argparse.ArgumentParser(description="Filters candidate de novo \
-        variants for sites with good characteristics.")
-    parser.add_argument("--de-novos", default=DE_NOVOS_PATH, \
+    parser = argparse.ArgumentParser(description="Filters candidate de novo "
+        "variants for sites with good characteristics.")
+    parser.add_argument("--de-novos", default=DE_NOVOS_PATH,
         help="Path to file listing candidate de novos.")
-    parser.add_argument("--de-novos-indels", default=MISSED_INDELS_PATH, \
-        help="Path to file listing candidate de novos indels (not found in \
-            the standard de novo filtering).")
-    parser.add_argument("--families", default=FAMILIES_PATH, \
+    parser.add_argument("--de-novos-indels", default=MISSED_INDELS_PATH,
+        help="Path to file listing candidate de novos indels (not found in"
+            "the standard de novo filtering).")
+    parser.add_argument("--families", default=FAMILIES_PATH,
         help="Path to file listing family relationships (PED file).")
-    parser.add_argument("--sample-fails", default=FAIL_PATH, \
+    parser.add_argument("--sample-fails", default=FAIL_PATH,
         help="Path to file listing family relationships (PED file).")
-    parser.add_argument("--sample-fails-indels", default=INDEL_FAILS_PATH, \
+    parser.add_argument("--sample-fails-indels", default=INDEL_FAILS_PATH,
         help="Path to file listing family relationships (PED file).")
-    parser.add_argument("--last-base-sites", default=LAST_BASE_PATH, \
+    parser.add_argument("--fix-missing-genes", action='store_true', default=False,
+        help="Whether to attempt re-annotation of gene symbols for variants"
+            "lacking gene symbols.")
+    parser.add_argument("--last-base-sites",
         help="Path to file of all conserved last base of exon sites in genome.")
-    parser.add_argument("--output", default=OUTPUT_PATH, \
+    parser.add_argument("--include-noncoding", action='store_true', default=False,
+        help="Whether to include noncoding variants in the output. By default "
+            "this will filter to sites within coding regions")
+    parser.add_argument("--include-all", action='store_true', default=False,
+        help="Use if instead of filtering, you want to annotate all candidates"
+            "for whether they pass or not.")
+    parser.add_argument("--output", default=OUTPUT_PATH,
         help="Path to file for filtered de novos.")
     
     args = parser.parse_args()
     
     return args
 
-def include_missing_indels(de_novos, indels_path, fails_path, families_path):
-    """ load and filter the missing candidate indels
-    """
-    
-    # load the missing indels datasets and filter for good quality sites
-    missing_indels = load_missing_indels(indels_path, families_path)
-    sample_fails = [ x.strip() for x in open(fails_path) ]
-    missing_indels = filter_missing_indels(missing_indels, sample_fails)
-    missing_indels = subset_de_novos(missing_indels)
-    
-    de_novos = de_novos.append(missing_indels)
-    
-    return de_novos
-
-def main():
-    args = get_options()
-    
+def check_denovogear_sites(de_novos_path, fails_path, families_path, fix_missing_genes=True):
+    '''
+    '''
     # load the datasets
-    de_novos = pandas.read_table(args.de_novos, na_filter=False)
-    families = pandas.read_table(args.families)
+    de_novos = pandas.read_table(de_novos_path, na_filter=False)
+    families = pandas.read_table(families_path)
     de_novos = de_novos.merge(families, how="left", left_on="person_stable_id", right_on="individual_id")
     
-    sample_fails = [ x.strip() for x in open(args.sample_fails) ]
+    sample_fails = [ x.strip() for x in open(fails_path) ]
     
     # run some initial screening, and annotate sites with ref and alt depths
     de_novos = preliminary_filtering(de_novos, sample_fails)
     de_novos = exclude_segdups(de_novos)
-    de_novos = fix_missing_gene_symbols(de_novos)
+    
+    if fix_missing_genes:
+        de_novos = fix_missing_gene_symbols(de_novos)
+    
     de_novos = extract_alt_and_ref_counts(de_novos)
     de_novos = count_gene_recurrence(de_novos)
     
@@ -111,16 +109,40 @@ def main():
     passed = de_novos[pass_status]
     
     passed = subset_de_novos(passed)
+    
+    return passed
+
+def check_missing_indels(indels_path, fails_path, families_path):
+    """ load and filter the missing candidate indels
+    """
+    
+    # load the missing indels datasets and filter for good quality sites
+    missing_indels = load_missing_indels(indels_path, families_path)
+    sample_fails = [ x.strip() for x in open(fails_path) ]
+    missing_indels = filter_missing_indels(missing_indels, sample_fails)
+    missing_indels = subset_de_novos(missing_indels)
+    
+    return missing_indels
+
+def main():
+    args = get_options()
+    
+    de_novos = check_denovogear_sites(args.de_novos, args.sample_fails, args.families)
+    
+    passed = subset_de_novos(passed)
     if args.de_novos_indels is not None:
-        passed = include_missing_indels(passed, args.de_novos_indels, args.sample_fails_indels, args.families)
+        indels = check_missing_indels(args.de_novos_indels, args.sample_fails_indels, args.families)
+        de_novos = de_novos.append(indels, ignore_index=True)
     
-    # make sure we are only looking at sites within coding regions
-    passed = passed[passed["coding"]]
+    if not args.include_noncoding:
+        # make sure we are only looking at sites within coding regions
+        de_novos = de_novos[check_coding(de_novos)]
     
-    passed = change_conserved_last_base_consequence(passed, args.last_base_sites)
+    if args.last_base_sites is not None:
+        de_novos = change_conserved_last_base_consequence(de_novos, args.last_base_sites)
     
-    passed = get_independent_de_novos(passed, args.families)
-    passed.to_csv(args.output, sep= "\t", index=False)
+    de_novos = get_independent_de_novos(de_novos, args.families)
+    de_novos.to_csv(args.output, sep= "\t", index=False, na_value='NA')
 
 if __name__ == '__main__':
     main()
