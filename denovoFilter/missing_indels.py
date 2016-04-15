@@ -57,7 +57,7 @@ def filter_missing_indels(candidates, sample_fails):
     """ filter the candidate missing indels.
     
     We have a set of sites that have been called in the child, but not in the
-    parents. These are the canddiates for de novo mutations. Many of these sites
+    parents. These are the candidates for de novo mutations. Many of these sites
     have been checked by denovogear, for which we have a different filtering
     process. This function filters candidate sites which have not been examined
     by denovogear. Denovogear has a reduced sensitivity for indels, so this
