@@ -75,10 +75,8 @@ def load_de_novo_calls(path):
     de_novos["chrom"] = de_novos["chrom"].astype("str")
     de_novos["end_pos"] = de_novos["start_pos"] + de_novos["ref_allele"].str.len() - 1
     
-    
     de_novos = de_novos[['person_id', 'sex', 'chrom', 'start_pos', 'end_pos',
-        'ref_allele', 'alt_allele', 'hgnc', 'var_type', 'consequence', 'max_af',
-         'pp_dnm']]
+        'ref_allele', 'alt_allele', 'hgnc', 'consequence', 'max_af', 'pp_dnm']]
     
     return de_novos
 
@@ -252,9 +250,9 @@ def fix_incorrect_positions(validations, de_novos):
         on=["person_id", "chrom", "start_pos", "end_pos", "ref_allele", "alt_allele"])
     
     # some of the sites have changed positions during the validation efforts
-    missing = validations[validations.var_type.isnull()]
+    missing = validations[validations.consequence.isnull()]
     correct_positions = missing.apply(find_matching_site, axis=1, de_novos=de_novos)
-    validations.start_pos[validations.var_type.isnull()][correct_positions > 0] = correct_positions[correct_positions > 0]
+    validations.start_pos[validations.consequence.isnull()][correct_positions > 0] = correct_positions[correct_positions > 0]
     
     validations = validations[["person_id", "chrom", "start_pos", "end_pos", "ref_allele", \
         "alt_allele", "status"]]

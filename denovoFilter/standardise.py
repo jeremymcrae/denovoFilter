@@ -30,7 +30,7 @@ def standardise_columns(de_novos):
     """
     
     columns = ["person_stable_id", "chrom", "pos", "ref", "alt",
-        "symbol", "var_type", "consequence", "max_af", "pp_dnm"]
+        "symbol", "consequence", "max_af", "pp_dnm"]
     
     if 'pass' in de_novos.columns:
         columns.append('pass')

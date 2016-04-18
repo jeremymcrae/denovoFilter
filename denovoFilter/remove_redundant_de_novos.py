@@ -124,11 +124,6 @@ def get_independent_de_novos(de_novos, trios_path):
     # for each family)
     dups = de_novos[["family_id", "chrom", "pos", "ref", "alt"]].duplicated()
     de_novos = de_novos[-dups]
-    de_novos = de_novos[['person_stable_id', 'sex', 'chrom', 'pos', 'ref',
-        'alt', 'symbol', 'var_type', 'consequence', 'max_af', 'pp_dnm',
-        'child_ref_F', 'child_ref_R', 'child_alt_F', 'child_alt_R',
-        'mother_ref_F', 'mother_ref_R', 'mother_alt_F', 'mother_alt_R',
-        'father_ref_F', 'father_ref_R', 'father_alt_F', 'father_alt_R']]
     
     without_recurrences = remove_within_person_recurrences(de_novos)
     

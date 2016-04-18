@@ -72,7 +72,6 @@ You can also use other optional flags:
 | in_child_vcf     | 1             | Whether the variant is present in the child's VCF (1=true, 0=false) |
 | in_mother_vcf    | 0             | Whether the variant is present in the mother's VCF (1=true, 0=false) |
 | in_father_vcf    | 0             | Whether the variant is present in the father's VCF (1=true, 0=false) |
-| var_type         | "DENOVO-SNP"  | Code for whether the candidate is a SNV (DENOVO-SNP) or indel (DENOVO-INDEL) |
 
 #### Definitions for the required columns in the family relationships file
 | name          | example       | definition       |

@@ -44,7 +44,6 @@ def load_missing_indels(candidates_path):
     missed["in_mother_vcf"] = 0
     missed["in_father_vcf"] = 0
     missed["pp_dnm"] = None
-    missed["var_type"] = "DENOVO-INDEL"
     
     return missed
 
