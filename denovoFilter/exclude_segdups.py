@@ -22,11 +22,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 from pkg_resources import resource_filename
 import gzip
 
+from intervaltree import IntervalTree
+
 def load_segdups():
     """ load all the segdup regions
     
     Returns:
-        dictionary of sets of segdup regions per chromosome
+        dictionary of IntervalTree based segdup regions per chromosome
     """
     
     segdup_path = resource_filename(__name__, "data/segdup_regions.gz")
@@ -43,33 +45,32 @@ def load_segdups():
             end = int(line[2])
             
             if chrom not in segdups:
-                segdups[chrom] = set([])
+                segdups[chrom] = IntervalTree()
             
-            segdups[chrom].add((start, end))
+            segdups[chrom].addi(start, end)
     
     return segdups
 
-def exclude_segdups(de_novos):
-    """ removes de novo calls within segmental duplications.
+def check_segdups(de_novos):
+    """ identifies de novo calls within segmental duplications.
     
     Args:
         de_novos: dataframe of candidate de novo calls
     
     Returns:
-        dataframe of candidate de novo calls with sites in segmental
-        duplications removed.
+        list of booleans for whether each candidate is not in a segdup region.
     """
     
     segdups = load_segdups()
     
-    # for each de novo, check if it is in a segdup region. This is definitely
-    #  not the most efficient way to check this.
-    de_novos["in_segdup"] = True
-    for row_index, de_novo in de_novos.iterrows():
-        chrom = de_novo["chrom"]
-        pos = de_novo["pos"]
+    # check if each candidate is not in a segdup region. This uses an interval
+    # tree for efficient searching.
+    statuses = []
+    for i, row in de_novos.iterrows():
+        chrom = row["chrom"]
+        pos = row["pos"]
         
-        in_segdup = any([ pos >= x[0] and pos <= x[1] for x in segdups[chrom] ])
-        de_novos.loc[row_index, "in_segdup"] = in_segdup
+        status = len(segdups[chrom].search(pos)) == 0
+        statuses.append(status)
     
-    return de_novos[-de_novos["in_segdup"]]
+    return statuses

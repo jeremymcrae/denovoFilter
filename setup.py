@@ -32,6 +32,7 @@ setup(
     install_requires=['pandas >= 0.13.1',
                       'numpy >= 1.6.1',
                       'scipy >= 0.9.0',
+                      'intervaltree >= 2.0',
     ],
     package_data={"denovoFilter": ['data/segdup_regions.gz']},
     classifiers=[
