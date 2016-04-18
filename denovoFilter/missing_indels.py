@@ -26,7 +26,7 @@ from denovoFilter.exclude_segdups import check_segdups
 from denovoFilter.allele_counts import extract_alt_and_ref_counts, \
     get_depths_and_proportions
 
-def load_missing_indels(candidates_path, families_path):
+def load_missing_indels(candidates_path):
     """ load the missed candidates dataset
     
     Args:

@@ -103,9 +103,9 @@ def check_denovogear_sites(de_novos_path, fails_path, fix_missing_genes=True,
     else:
         de_novos['pass'] = pass_status
     
-    passed = standardise_columns(passed)
+    de_novos = standardise_columns(de_novos)
     
-    return passed
+    return de_novos
 
 def check_missing_indels(indels_path, fails_path, annotate_only=False):
     """ load and filter the missing candidate indels
