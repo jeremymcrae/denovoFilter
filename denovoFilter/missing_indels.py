@@ -21,11 +21,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import pandas
 
-from denovoFilter.exclude_segdups import exclude_segdups
 from denovoFilter.preliminary_filtering import preliminary_filtering
+from denovoFilter.exclude_segdups import check_segdups
 from denovoFilter.allele_counts import extract_alt_and_ref_counts, \
     get_depths_and_proportions
-from denovoFilter.set_filter_status import subset_de_novos
 
 def load_missing_indels(candidates_path, families_path):
     """ load the missed candidates dataset
@@ -47,13 +46,9 @@ def load_missing_indels(candidates_path, families_path):
     missed["pp_dnm"] = None
     missed["var_type"] = "DENOVO-INDEL"
     
-    # get the proband sex
-    families = pandas.read_table(families_path, na_filter=False)
-    missed = missed.merge(families, how="left", left_on="person_stable_id", right_on="individual_id")
-    
     return missed
 
-def filter_missing_indels(candidates, sample_fails):
+def filter_missing_indels(candidates):
     """ filter the candidate missing indels.
     
     We have a set of sites that have been called in the child, but not in the
@@ -70,20 +65,18 @@ def filter_missing_indels(candidates, sample_fails):
         dataframe of candidate sites that pass the required criteria.
     """
     
-    # run some initial screening, and annotate sites with ref and alt depths
-    candidates = preliminary_filtering(candidates, sample_fails, maf_cutoff=0)
-    candidates = exclude_segdups(candidates)
-    candidates = extract_alt_and_ref_counts(candidates)
-    candidates = get_depths_and_proportions(candidates)
+    counts = extract_alt_and_ref_counts(candidates)
+    depths = get_depths_and_proportions(counts)
     
-    candidates["min_parent_depth"] = candidates[["mother_depth", "father_depth"]].min(axis=1)
-    candidates["max_parental_proportion"] = candidates[["mother_prp", "father_prp"]].max(axis=1)
+    depths["min_parent_depth"] = depths[["mom_depth", "dad_depth"]].min(axis=1)
+    depths["max_parent_proportion"] = depths[["mom_prp", "dad_prp"]].max(axis=1)
     
     # apply the filtering criteria for the missing indels
-    candidates = candidates[candidates["child_alts"] > 2]
-    candidates = candidates[candidates["min_parent_alt"] < 2]
-    candidates = candidates[candidates["min_parent_depth"] > 7]
-    candidates = candidates[candidates["max_parental_proportion"] < 0.1]
-    candidates = candidates[candidates["child_prp"] > 0.2]
+    good_depth = depths["child_alts"] > 2
+    low_parental_alt = candidates["min_parent_alt"] < 2
+    good_parental_depth = depths["min_parent_depth"] > 7
+    good_parental_proportion = depths["max_parent_proportion"] < 0.1
+    good_child_proportion = depths["child_prp"] > 0.2
     
-    return subset_de_novos(candidates)
+    return good_depth & low_parental_alt & good_parental_depth & \
+        good_parental_proportion & good_child_proportion
