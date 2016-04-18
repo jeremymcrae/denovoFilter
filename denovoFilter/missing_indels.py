@@ -72,7 +72,7 @@ def filter_missing_indels(candidates):
     
     # apply the filtering criteria for the missing indels
     good_depth = depths["child_alts"] > 2
-    low_parental_alt = candidates["min_parent_alt"] < 2
+    low_parental_alt = counts["min_parent_alt"] < 2
     good_parental_depth = depths["min_parent_depth"] > 7
     good_parental_proportion = depths["max_parent_proportion"] < 0.1
     good_child_proportion = depths["child_prp"] > 0.2
