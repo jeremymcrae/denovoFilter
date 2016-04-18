@@ -40,19 +40,20 @@ def fix_missing_gene_symbols(de_novos):
         de_novos: dataframe of de novo variants
     
     Returns:
-        data frame of de novos, but with additional annotations for many
+        pandas Series of HGNC symbols, with additional annotations for many
         variants previously lacking a HGNC symbol.
     """
     
+    symbols = de_novos["symbol"].copy()
+    
     # get the variants with no gene annotation, ensure chrom, start and stop
     # positions columns exist
-    missing = de_novos[de_novos["symbol"] == ""].copy()
-    missing["start"] = missing["pos"]
-    missing["end"] = [ x["start"] + len(x["ref"]) - 1 for i, x in missing.iterrows() ]
+    missing = de_novos[symbols == ""].copy()
+    missing['end'] = missing["pos"] + missing["ref"].str.len() - 1
     
     # find the HGNC symbols (if any) for the variants
-    symbols = [ get_gene_id(x["chrom"], x["start"], x["end"], verbose=True) for i, x in missing.iterrows() ]
-    de_novos["symbol"][de_novos["symbol"] == ""] = symbols
+    missing = [ get_gene_id(x["chrom"], x["pos"], x['end'], verbose=True) for i, x in missing.iterrows() ]
+    symbols[de_novos["symbol"] == ""] = missing
     
     # 360 out of 17000 de novos still lack HGNC symbols. Their consequences are:
     #
@@ -66,13 +67,11 @@ def fix_missing_gene_symbols(de_novos):
     # In spot checks, these are sufficiently distant from genes that we can't
     # add them to the analysis of their nearest gene. We shall analyse these
     # per site by giving them mock gene symbols.
-    missing = de_novos[de_novos["symbol"] == ""]
+    missing = de_novos[symbols == ""]
+    fake = 'fake_symbol.' + missing['chrom'].map(str) + '_' + missing["pos"].map(str)
+    symbols[de_novos["symbol"] == ""] = fake
     
-    pandas.set_option("mode.chained_assignment", None)
-    de_novos["symbol"][de_novos["symbol"] == ""] = \
-        [ "fake_symbol.{}_{}".format(x["chrom"], x["pos"]) for i, x in missing.iterrows() ]
-    
-    return de_novos
+    return symbols
 
 def open_url(url, headers):
     """ open url with python libraries
