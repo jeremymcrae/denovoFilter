@@ -26,13 +26,11 @@ from datetime import date
 
 import pandas
 
-from denovoFilter.exclude_segdups import exclude_segdups
 from denovoFilter.preliminary_filtering import preliminary_filtering
+from denovoFilter.exclude_segdups import check_segdups
 from denovoFilter.missing_symbols import fix_missing_gene_symbols
-from denovoFilter.allele_counts import extract_alt_and_ref_counts, \
-    count_gene_recurrence
-from denovoFilter.site_deviations import test_sites, test_genes
-from denovoFilter.set_filter_status import get_filter_status, subset_de_novos
+from denovoFilter.set_filter_status import filter_denovogear_sites
+from denovoFilter.standardise import standardise_columns
 from denovoFilter.remove_redundant_de_novos import get_independent_de_novos
 from denovoFilter.missing_indels import filter_missing_indels, load_missing_indels
 from denovoFilter.change_last_base_sites import change_conserved_last_base_consequence
@@ -62,17 +60,19 @@ def get_options():
         help="Path to file listing family relationships (PED file).")
     parser.add_argument("--sample-fails-indels", default=INDEL_FAILS_PATH,
         help="Path to file listing family relationships (PED file).")
+    parser.add_argument("--last-base-sites",
+        help="Path to file of all conserved last base of exon sites in genome.")
+    
     parser.add_argument("--fix-missing-genes", action='store_true', default=False,
         help="Whether to attempt re-annotation of gene symbols for variants"
             "lacking gene symbols.")
-    parser.add_argument("--last-base-sites",
-        help="Path to file of all conserved last base of exon sites in genome.")
     parser.add_argument("--include-noncoding", action='store_true', default=False,
         help="Whether to include noncoding variants in the output. By default "
             "this will filter to sites within coding regions")
-    parser.add_argument("--include-all", action='store_true', default=False,
+    parser.add_argument("--annotate-only", action='store_true', default=False,
         help="Use if instead of filtering, you want to annotate all candidates"
             "for whether they pass or not.")
+    
     parser.add_argument("--output", default=OUTPUT_PATH,
         help="Path to file for filtered de novos.")
     
@@ -80,58 +80,65 @@ def get_options():
     
     return args
 
-def check_denovogear_sites(de_novos_path, fails_path, families_path, fix_missing_genes=True):
+def check_denovogear_sites(de_novos_path, fails_path, fix_missing_genes=True,
+        annotate_only=False):
     '''
     '''
     # load the datasets
     de_novos = pandas.read_table(de_novos_path, na_filter=False)
-    families = pandas.read_table(families_path)
-    de_novos = de_novos.merge(families, how="left", left_on="person_stable_id", right_on="individual_id")
-    
     sample_fails = [ x.strip() for x in open(fails_path) ]
     
-    # run some initial screening, and annotate sites with ref and alt depths
-    de_novos = preliminary_filtering(de_novos, sample_fails)
-    de_novos = exclude_segdups(de_novos)
+    # run some initial screening
+    statuses = preliminary_filtering(de_novos, sample_fails)
+    segdup_statuses = check_segdups(de_novos)
     
     if fix_missing_genes:
-        de_novos = fix_missing_gene_symbols(de_novos)
-    
-    de_novos = extract_alt_and_ref_counts(de_novos)
-    de_novos = count_gene_recurrence(de_novos)
-    
-    # check if sites deviate from expected strand bias and parental alt depths
-    de_novos = test_sites(de_novos)
-    de_novos = test_genes(de_novos)
+        de_novos['symbol'] = fix_missing_gene_symbols(de_novos)
     
     # get the variants that pass the filtering criteria
-    pass_status = get_filter_status(de_novos)
-    passed = de_novos[pass_status]
+    pass_status = filter_denovogear_sites(de_novos, statuses & segdup_statuses)
     
-    passed = subset_de_novos(passed)
+    if annotate_only:
+        de_novos = de_novos[pass_status]
+    else:
+        de_novos['pass'] = pass_status
+    
+    passed = standardise_columns(passed)
     
     return passed
 
-def check_missing_indels(indels_path, fails_path, families_path):
+def check_missing_indels(indels_path, fails_path, annotate_only=False):
     """ load and filter the missing candidate indels
     """
     
     # load the missing indels datasets and filter for good quality sites
-    missing_indels = load_missing_indels(indels_path, families_path)
+    missing_indels = load_missing_indels(indels_path)
     sample_fails = [ x.strip() for x in open(fails_path) ]
-    missing_indels = filter_missing_indels(missing_indels, sample_fails)
-    missing_indels = subset_de_novos(missing_indels)
+    
+    # run some initial screening
+    status = preliminary_filtering(missing_indels, sample_fails, maf_cutoff=0)
+    segdup_status = check_segdups(missing_indels)
+    
+    pass_status = filter_missing_indels(missing_indels) & status & segdup_status
+    
+    if annotate_only:
+        missing_indels = missing_indels[pass_status]
+    else:
+        missing_indels['pass'] = pass_status
+    
+    missing_indels = standardise_columns(missing_indels)
     
     return missing_indels
 
 def main():
     args = get_options()
     
-    de_novos = check_denovogear_sites(args.de_novos, args.sample_fails, args.families)
+    de_novos = check_denovogear_sites(args.de_novos, args.sample_fails,
+        args.fix_missing_genes, args.annotate_only)
     
-    passed = subset_de_novos(passed)
     if args.de_novos_indels is not None:
-        indels = check_missing_indels(args.de_novos_indels, args.sample_fails_indels, args.families)
+        indels = check_missing_indels(args.de_novos_indels,
+            args.sample_fails_indels, args.annotate_only)
         de_novos = de_novos.append(indels, ignore_index=True)
     
     if not args.include_noncoding:
@@ -140,6 +147,12 @@ def main():
     
     if args.last_base_sites is not None:
         de_novos = change_conserved_last_base_consequence(de_novos, args.last_base_sites)
+    
+    # include the proband sex, since this is necessary to check chrX candidates
+    # for being likely pathogenic.
+    families = pandas.read_table(families_path, sep='\t')
+    sex = dict(zip(families['individual_id'], families['sex']))
+    de_novos['sex'] = de_novos['person_stable_id'].map(sex)
     
     de_novos = get_independent_de_novos(de_novos, args.families)
     de_novos.to_csv(args.output, sep= "\t", index=False, na_value='NA')
