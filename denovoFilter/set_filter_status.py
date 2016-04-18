@@ -21,9 +21,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import pandas
 
+from denovoFilter.allele_counts import extract_alt_and_ref_counts, \
+    get_recurrent_genes
+from denovoFilter.site_deviations import test_sites, test_genes
 from denovoFilter.constants import P_CUTOFF
 
-def get_filter_status(de_novos):
+def filter_denovogear_sites(de_novos, pass_status):
     """ set flags for filtering, fail samples with strand bias < threshold, or any 2 of
      (i) both parents have ALTs
      (ii) site-specific parental alts < threshold,
@@ -36,37 +39,25 @@ def get_filter_status(de_novos):
         vector of true/false for whether each variant passes the filters
     """
     
-    overall_pass = pandas.Series([True] * len(de_novos))
+    counts = extract_alt_and_ref_counts(de_novos)
+    recurrent = get_recurrent_genes(de_novos)
     
-    # fail SNVs with excessive strand bias
-    overall_pass[(de_novos["SB_pval"] < P_CUTOFF) & (de_novos["var_type"] == "DENOVO-SNP")] = False
+    # check if sites deviate from expected strand bias and parental alt depths
+    strand_bias, parental_site_bias = test_sites(counts, pass_status)
+    parental_gene_bias = test_genes(counts, strand_bias, pass_status)
+    
+    # fail SNVs with excessive strand bias. Don't check strand bias in indels.
+    overall_pass = (strand_bias >= P_CUTOFF) | (de_novos["ref"].str.len() != 1) | \
+        (de_novos["alt"].str.len() != 1)
     
     # find if each de novo has passed each of three different filtering strategies
     # fail sites with gene-specific parental alts, only if >1 sites called per gene
-    gene_fail = (de_novos["PA_pval_gene"] < P_CUTOFF) & (de_novos["count.genes"] > 1)
-    site_fail = (de_novos["PA_pval_site"] < P_CUTOFF)
-    excess_alts = de_novos["min_parent_alt"] > 0
+    gene_fail = (parental_gene_bias < P_CUTOFF) & de_novos["symbol"].isin(recurrent)
+    site_fail = (parental_site_bias < P_CUTOFF)
+    excess_alts = counts["min_parent_alt"] > 0
     
     # exclude sites that fail two of three classes
     sites = pandas.DataFrame({"gene": gene_fail, "site": site_fail, "alts": excess_alts})
     overall_pass[sites.sum(axis=1) >= 2] = False
     
     return overall_pass
-
-def subset_de_novos(de_novos):
-    """ subset down to specific columns
-    
-    Args:
-        de_novos dataframe of de novo variants
-    
-     Returns:
-        data frame with only the pertinent columns included
-    """
-    
-    de_novos = de_novos[["person_stable_id", "sex", "chrom", "pos", "ref", "alt",
-        "symbol", "var_type", "consequence", "max_af", "pp_dnm",
-        "child_ref_F", "child_ref_R", "child_alt_F", "child_alt_R",
-        "mother_ref_F", "mother_ref_R", "mother_alt_F", "mother_alt_R",
-        "father_ref_F", "father_ref_R", "father_alt_F", "father_alt_R"]]
-    
-    return de_novos
