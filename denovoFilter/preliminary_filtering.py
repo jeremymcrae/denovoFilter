@@ -69,9 +69,7 @@ def preliminary_filtering(de_novos, sample_fails=None, maf_cutoff=0.01):
         # remove samples with too many candidates
         good_samples = ~de_novos["person_stable_id"].isin(sample_fails)
     
-    de_novos = de_novos[passes_maf & appears_de_novo & good_samples]
-    
-    return de_novos
+    return passes_maf & appears_de_novo & good_samples
 
 def check_coding(de_novos, cq_name="consequence"):
     """check whether the consequence is for a coding consequence
