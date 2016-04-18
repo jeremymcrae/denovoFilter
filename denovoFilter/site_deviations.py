@@ -44,21 +44,28 @@ def site_strand_bias(site):
     except ValueError:
         return float(1)
 
-def test_sites(de_novos):
+def test_sites(de_novos, pass_status=None):
     """ tests each site for deviation from expected behaviour
     
     Args:
         de_novos: dataframe of de novo variants
+        pass_status: whether the candidate passed prelimary filtering for MAF,
+            and segdups.
     
     Returns:
         p-value for whether the forward or reverse are biased in the proportion
         of ref and alt alleles.
     """
     
+    de_novos["key"] = zip(de_novos["chrom"], de_novos["pos"], de_novos["alt"])
+    
     alleles = de_novos[["key",
         "child_ref_F", "child_ref_R", "child_alt_F", "child_alt_R",
         "mother_ref_F", "mother_ref_R", "mother_alt_F", "mother_alt_R",
-        "father_ref_F", "father_ref_R", "father_alt_F", "father_alt_R"]]
+        "father_ref_F", "father_ref_R", "father_alt_F", "father_alt_R"]].copy()
+    
+    if pass_status is not None:
+        alleles = alleles[pass_status]
     
     alleles = alleles.convert_objects(convert_numeric=True)
     variants = alleles.groupby("key")
@@ -70,16 +77,18 @@ def test_sites(de_novos):
     
     # check for overabundance of parental alt alleles using binomial test
     parent_counts = pandas.DataFrame({"alt": results["parent_alt"], "ref": results["parent_ref"]})
-    results["PA_pval_site"] = parent_counts.apply(scipy.stats.binom_test, axis=1, p=ERROR_RATE)
+    parental_alt_p = parent_counts.apply(scipy.stats.binom_test, axis=1, p=ERROR_RATE)
+    recode = dict(zip(results['key'], parental_alt_p))
+    parental_bias = de_novos['key'].map(recode)
     
     # check for strand bias by fishers exact test on the allele counts
-    results["SB_pval"] = results.apply(site_strand_bias, axis=1)
+    strand_bias_p = results.apply(site_strand_bias, axis=1)
+    recode = dict(zip(results['key'], strand_bias_p))
+    strand_bias = de_novos['key'].map(recode)
     
-    de_novos = de_novos.merge(results, how="left")
-    
-    return de_novos
+    return strand_bias, parental_bias
 
-def test_genes(de_novos):
+def test_genes(de_novos, strand_bias, pass_status=None):
     """ checks if the variants in a gene have more parental ALTs than expected
     
     Args:
@@ -90,14 +99,18 @@ def test_genes(de_novos):
         of ref and alt alleles within each gene.
     """
     
+    if pass_status is not None:
+        de_novos = de_novos[pass_status].copy()
+        strand_bias = strand_bias[pass_status].copy()
+    
     # exclude de novo SNVs that fail the strand bias filter, otherwise these
     # skew the parental alts within genes
-    sites = de_novos[~(de_novos["SB_pval"] < P_CUTOFF) & (de_novos["var_type"] == "DENOVO-SNP")]
+    sites = de_novos[(strand_bias >= P_CUTOFF) & (de_novos["ref"].str.len() == 1) &
+        (de_novos["alt"].str.len() == 1)]
     
-    # loop to calculate gene-specific PA values after SB filtering
     sites = sites[["symbol",
         "mother_ref_F", "mother_ref_R", "mother_alt_F", "mother_alt_R",
-        "father_ref_F", "father_ref_R", "father_alt_F", "father_alt_R"]]
+        "father_ref_F", "father_ref_R", "father_alt_F", "father_alt_R"]].copy()
     
     sites = sites.convert_objects(convert_numeric=True)
     
@@ -110,8 +123,7 @@ def test_genes(de_novos):
     
     # check for overabundance of parental alt alleles using binomial test
     parent_counts = pandas.DataFrame({"alt": results["gene_alt"], "ref": results["gene_ref"]})
-    results["PA_pval_gene"] = parent_counts.apply(scipy.stats.binom_test, axis=1, p=ERROR_RATE)
+    parental_alt_p = parent_counts.apply(scipy.stats.binom_test, axis=1, p=ERROR_RATE)
+    recode = dict(zip(results["symbol"], parental_alt_p))
     
-    de_novos = de_novos.merge(results, how="left")
-    
-    return de_novos
+    return de_novos['symbol'].map(recode)
