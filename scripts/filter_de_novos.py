@@ -22,7 +22,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 from __future__ import absolute_import
 
 import argparse
-from datetime import date
 
 import pandas
 
@@ -35,33 +34,26 @@ from denovoFilter.remove_redundant_de_novos import get_independent_de_novos
 from denovoFilter.missing_indels import filter_missing_indels, load_missing_indels
 from denovoFilter.change_last_base_sites import change_conserved_last_base_consequence
 
-DE_NOVOS_PATH = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13/denovo_gear_trios_extracted_passed_variants_11.05.15.tsv"
-MISSED_INDELS_PATH = "/lustre/scratch113/projects/ddd/users/jm33/de_novo_data/missed_denovo_indels_datafreeze_2015-04-13.txt"
-FAMILIES_PATH = "/nfs/ddd0/Data/datafreeze/ddd_data_releases/2015-04-13/family_relationships.txt"
-FAIL_PATH = "/lustre/scratch113/projects/ddd/users/jm33/de_novo_data/de_novo_sample_fails.txt"
-INDEL_FAILS_PATH = "/lustre/scratch113/projects/ddd/users/jm33/de_novo_data/de_novo_sample_fails_missed_indels.txt"
-LAST_BASE_PATH = "/lustre/scratch113/projects/ddd/users/jm33/last_base_sites_G.json"
-OUTPUT_PATH = "/lustre/scratch113/projects/ddd/users/jm33/de_novos.ddd_4k.ddd_only.{}.txt".format(str(date.today()))
-
 def get_options():
     """ get the command line options
     """
     
     parser = argparse.ArgumentParser(description="Filters candidate de novo "
         "variants for sites with good characteristics.")
-    parser.add_argument("--de-novos", default=DE_NOVOS_PATH,
+    parser.add_argument("--de-novos",
         help="Path to file listing candidate de novos.")
-    parser.add_argument("--de-novos-indels", default=MISSED_INDELS_PATH,
+    parser.add_argument("--de-novos-indels",
         help="Path to file listing candidate de novos indels (not found in"
             "the standard de novo filtering).")
-    parser.add_argument("--families", default=FAMILIES_PATH,
+    parser.add_argument("--families", required=True,
         help="Path to file listing family relationships (PED file).")
-    parser.add_argument("--sample-fails", default=FAIL_PATH,
-        help="Path to file listing family relationships (PED file).")
-    parser.add_argument("--sample-fails-indels", default=INDEL_FAILS_PATH,
-        help="Path to file listing family relationships (PED file).")
+    parser.add_argument("--sample-fails",
+        help="Path to file listing problematic samples for the denovogear calls.")
+    parser.add_argument("--sample-fails-indels",
+        help="Path to file listing problematic samples for the indel calls.")
     parser.add_argument("--last-base-sites",
-        help="Path to file of all conserved last base of exon sites in genome.")
+        help="Path to file of all conserved last base of exon sites in genome,"
+            " default is to not change anything if this option is not used.")
     
     parser.add_argument("--fix-missing-genes", action='store_true', default=False,
         help="Whether to attempt re-annotation of gene symbols for variants"
@@ -146,7 +138,7 @@ def main():
             args.sample_fails_indels, args.annotate_only)
         de_novos = de_novos.append(indels, ignore_index=True)
     
-    if not args.include_noncoding:
+    if not args.include_noncoding and not args.annotate_only:
         # make sure we are only looking at sites within coding regions
         de_novos = de_novos[check_coding(de_novos)]
     

@@ -25,6 +25,7 @@ import numpy
 consequences = ["transcript_ablation", "splice_donor_variant",
     "splice_acceptor_variant", "stop_gained", "frameshift_variant",
     "initiator_codon_variant", "stop_lost", "start_lost", "transcript_amplification",
+    'conserved_exon_terminus_variant',
     "inframe_insertion", "inframe_deletion", "missense_variant", "protein_altering_variant",
     "splice_region_variant", "incomplete_terminal_codon_variant",
     "stop_retained_variant", "synonymous_variant", "coding_sequence_variant",
@@ -60,7 +61,7 @@ def get_most_severe(consequences):
     
     return list(severity["consequence"][severity["rank"] == best_rank])[0]
 
-def remove_within_person_recurrences(de_novos):
+def get_person_recurrences(de_novos):
     """ remove de novos recurrent in a gene within individuals.
     
     Find the de novos that are recurrent within a single individual in a
@@ -72,7 +73,7 @@ def remove_within_person_recurrences(de_novos):
         de_novos: dataframe of de novo variants
     
     Returns:
-        dataframe with duplicated sites per gene removed for each individual
+        pandas Series for whether each canddiate is a duplicate of not
     """
     
     # find the variants which are recurrent within a person in a single gene
@@ -85,23 +86,22 @@ def remove_within_person_recurrences(de_novos):
     # split the dataset, so we can process gene by gene
     genes = in_person_dups.groupby(["person_stable_id", "symbol"])
     
-    # pick a variant for each person, ie the first of the most severe consequence
-    exclude = pandas.Series([], dtype=numpy.bool_)
+    # pick a variant for each person, the first of the most severe consequence
+    retain = pandas.Series([], dtype=numpy.bool_)
     for key, gene in genes:
         consequence = get_most_severe(gene["consequence"])
         first = gene[gene["consequence"] == consequence].index[0]
         
-        gene_exclude = pandas.Series([True] * len(gene), index=gene.index)
-        gene_exclude[first] = False
-        exclude = exclude.append(gene_exclude)
+        gene_retain = pandas.Series([True] * len(gene), index=gene.index)
+        gene_retain[first] = False
+        retain = retain.append(gene_retain)
     
-    # remove the selected de novos
-    person_dups.loc[exclude.index] = exclude
-    de_novos = de_novos[-person_dups]
+    # set the selected de novos
+    person_dups.loc[retain.index] = retain
     
-    return de_novos
+    return person_dups
 
-def get_independent_de_novos(de_novos, trios_path):
+def get_independent_de_novos(de_novos, families_path, annotate_only=False):
     """ exclude de novos that would otherwise lead to double counting.
     
     Remove de novos that are shared between multiple probands of a family or
@@ -109,22 +109,30 @@ def get_independent_de_novos(de_novos, trios_path):
     
     Args:
         de_novos: dataframe of de novo variants
-        trios_path
+        families_path: path to pedigree file for cohort.
+        annotate_only: whether to annotate the canddiate
     
     Returns:
         dataframe with duplicated sites removed
     """
     
-    families = pandas.read_table(trios_path, na_filter=False)
-    de_novos = de_novos.merge(families, how="left",
-        left_on=["person_stable_id", "sex"],
-        right_on=["individual_id", "sex"])
+    families = pandas.read_table(families_path, na_filter=False)
+    families = dict(zip(families['individual_id'], families['family_id']))
+    de_novos['family_id'] = de_novos['person_stable_id'].map(families)
     
     # restrict ourselves to the non-duplicates (this retains the first de novo
     # for each family)
-    dups = de_novos[["family_id", "chrom", "pos", "ref", "alt"]].duplicated()
-    de_novos = de_novos[-dups]
+    family_dups = de_novos[["family_id", "chrom", "pos", "ref", "alt"]].duplicated()
+    person_dups = get_person_recurrences(de_novos)
     
-    without_recurrences = remove_within_person_recurrences(de_novos)
+    # find the candidates which are not duplicates
+    non_dup = ~family_dups & ~person_dups
     
-    return without_recurrences
+    if not annotate_only:
+        de_novos = de_novos[non_dup]
+    else:
+        de_novos['pass'] = de_novos['pass'] & non_dup
+    
+    de_novos = de_novos.drop('family_id', axis=1)
+    
+    return de_novos
