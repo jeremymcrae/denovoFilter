@@ -23,7 +23,7 @@ from setuptools import setup
 
 setup(
     name = "denovoFilter",
-    version = "0.1.0",
+    version = "0.2.0",
     author = "Jeremy McRae",
     author_email = "jeremy.mcrae@sanger.ac.uk",
     description = ("Filtering candidate de novo variants."),
@@ -38,5 +38,6 @@ setup(
     classifiers=[
         "Development Status :: 3 - Alpha",
         "License :: OSI Approved :: MIT License",
-    ]
+    ],
+    test_suite="tests",
 )
