@@ -1,0 +1,31 @@
+language: python
+python:
+  - 2.7
+  - 3.3
+  - 3.5
+cache:
+  directories:
+    - $HOME/.cache/pip
+addons:
+  apt:
+    packages:
+      - libatlas-base-dev
+      - gfortran
+before_install:
+ - mkdir -p $HOME/.cache/pip/wheels
+ # build wheel only if none present
+ - travis_wait pip wheel --find-links=$HOME/.cache/pip/wheels --use-wheel --wheel-dir=$HOME/.cache/pip/wheels numpy
+ - travis_wait pip wheel --find-links=$HOME/.cache/pip/wheels --use-wheel --wheel-dir=$HOME/.cache/pip/wheels scipy
+ - travis_wait pip wheel --find-links=$HOME/.cache/pip/wheels --use-wheel --wheel-dir=$HOME/.cache/pip/wheels pandas
+ # now install from it
+ - pip install --no-index --find-links=$HOME/.cache/pip/wheels numpy
+ - pip install --no-index --find-links=$HOME/.cache/pip/wheels scipy
+ - pip install --no-index --find-links=$HOME/.cache/pip/wheels pandas
+install:
+  - python setup.py install
+  - pip install coveralls
+script:
+  - python setup.py test
+  - python -m coverage run --source=./denovoFilter -m unittest discover
+after_success:
+  - coveralls
