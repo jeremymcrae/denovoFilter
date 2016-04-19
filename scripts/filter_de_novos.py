@@ -65,8 +65,7 @@ def get_options():
         help="Use if instead of filtering, you want to annotate all candidates"
             "for whether they pass or not.")
     
-    parser.add_argument("--output", default=OUTPUT_PATH,
-        help="Path to file for filtered de novos.")
+    parser.add_argument("--output", help="Path to file for filtered de novos.")
     
     args = parser.parse_args()
     

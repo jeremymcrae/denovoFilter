@@ -4,27 +4,26 @@ Filter sites such that gene-specific de novo enrichment analyses are not
 contaminated with dodgy genes/sites. Further specificity will be achieved
 through downstream experimental validation of sites in putative 'hit' genes.
 
-After filtering there are about 1.7 candidate DNMs per trio.
-
-The filtering is based on a combination of site-specific strand bias (SB) and
-3 parental ALT (PA) metrics. A site fails if it fails either the strand bias
-filter, or any two of the three parental ALT metrics. These rules have been set
+The filtering is based on a combination of site-specific strand bias and
+three parental alt metrics. A site fails if it fails either the strand bias
+filter, or any two of the three parental alt metrics. These rules have been set
 so as to allow us to pass:
- * good sites in dodgy genes,
- * sites that are mosaic in one parent.
- * high depth sites that have a very small number of ALT reads in both parents
-   by chance (typically 1 ALT read in each parent).
+ * good sites in dodgy genes
+ * sites that are mosaic in one parent
+ * high depth sites that have a very small number of alt reads in both parents
+   by chance (typically 1 alt read in each parent)
 
 Reject site:
-  If SB p value < 1e-3 (SNVs only)
+  If strand-bias p-value < 1e-3 (SNVs only)
 
 OR
 
-If any 2 of the following conditions are met:
- 1. ALT reads present in both parents
- 2. site-specific PA p value <1e-3
- 3. gene-wide PA p value < 1e-3 (only if >1 sites called per gene after SB
-    filter applied, otherwise it is redundant with the site specific PA p value)
+If any two of the following conditions are met:
+ 1. alt reads present in both parents
+ 2. site-specific parental alt p-value <1e-3
+ 3. gene-wide parental alt p-value < 1e-3 (only if >1 sites called per gene after
+    strand bias filter applied, otherwise it is redundant with the site specific
+    parental alt p-value)
     
 ### Install
 Clone the repository and install with:
@@ -52,6 +51,10 @@ You can also use other optional flags:
  * `--sample-fails-indels SAMPLE_FAILS_INDELS_PATH` to exclude a set of probands
    from the missing indels candidates, due to those problems showing problems
    in the missing indels dataset.
+ * `--annotate-only` to add an extra column ('pass') which has True/False values
+   for whether the variants pass rather than filtering to a smaller subset. By
+   default the script will exclude site which fail the filtering.
+ * `--include-noncoding` to include noncoding sites in the filtered output.
 
 ### Input files
 #### Definitions for the required columns in the candidate *de novos* file
