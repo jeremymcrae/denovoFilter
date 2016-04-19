@@ -28,51 +28,47 @@ from tests.compare_dataframes import CompareTables
 
 class TestStandardise(CompareTables):
     
+    def setUp(self):
+        self.initial = DataFrame({
+            'person_stable_id': ['sample_01', 'sample_02'],
+            'chrom': ['6', '6'],
+            'pos': [1, 2],
+            'ref': ['A', 'G'],
+            'alt': ['C', 'T'],
+            'symbol': ['TEST1', 'TEST2'],
+            'consequence': ['missense_variant', 'stop_gained'],
+            'max_af': [0.0001, 0],
+            'pp_dnm': [1, 0.95],
+            })
+        
+        self.expected = self.initial.copy()
+    
     def test_standardise_columns(self):
         ''' test that standardising the columns works
         '''
         
-        initial = DataFrame({
-            'person_stable_id': ['sample_01', 'sample_02'],
-            'chrom': ['6', '6'],
-            'pos': [1, 2],
-            'ref': ['A', 'G'],
-            'alt': ['C', 'T'],
-            'symbol': ['TEST1', 'TEST2'],
-            'consequence': ['missense_variant', 'stop_gained'],
-            'max_af': [0.0001, 0],
-            'pp_dnm': [1, 0.95],
-            'child_ref_F': [23, 35]
-            })
+        self.initial['child_ref_F'] = [23, 35]
+        self.compare_tables(standardise_columns(self.initial), self.expected)
         
-        expected = DataFrame({
-            'person_stable_id': ['sample_01', 'sample_02'],
-            'chrom': ['6', '6'],
-            'pos': [1, 2],
-            'ref': ['A', 'G'],
-            'alt': ['C', 'T'],
-            'symbol': ['TEST1', 'TEST2'],
-            'consequence': ['missense_variant', 'stop_gained'],
-            'max_af': [0.0001, 0],
-            'pp_dnm': [1, 0.95],
-            })
+        self.expected['pp_dnm'] = [0.0, 0.0]
+        with self.assertRaises(AssertionError):
+            self.compare_tables(standardise_columns(self.initial), self.expected)
+    
+    def test_standardise_columns_with_pass(self):
+        ''' test that standardising the columns works when a 'pass' column exists
+        '''
         
-        self.compare_tables(standardise_columns(initial), expected)
+        self.initial['pass'] = [True, False]
+        self.initial['child_ref_F'] = [23, 35]
+        
+        self.expected['pass'] = [True, False]
+        self.compare_tables(standardise_columns(self.initial), self.expected)
     
     def test_standardise_error(self):
         ''' test if a required column is missing, we raise an error
         '''
         
-        initial = DataFrame({
-            'person_stable_id': ['sample_01', 'sample_02'],
-            'chrom': ['6', '6'],
-            'pos': [1, 2],
-            'ref': ['A', 'G'],
-            'alt': ['C', 'T'],
-            'symbol': ['TEST1', 'TEST2'],
-            'consequence': ['missense_variant', 'stop_gained'],
-            'max_af': [0.0001, 0],
-            })
+        self.initial = self.initial.drop('pp_dnm', axis=1)
         
         with self.assertRaises(KeyError):
-            standardise_columns(initial)
+            standardise_columns(self.initial)
