@@ -37,12 +37,12 @@ class TestSiteDeviations(unittest.TestCase):
         site = {'ref_F': 30, 'ref_R': 30, 'alt_F': 10, 'alt_R': 10}
         self.assertEqual(site_strand_bias(site), 1.0)
         
-        # zero counts give a p of 1.0
+        # zero counts give a p-value of 1.0
         site = {'ref_F': 0, 'ref_R': 0, 'alt_F': 0, 'alt_R': 0}
         self.assertEqual(site_strand_bias(site), 1.0)
         
-        # check that values which would ordinarily give out of bounds
-        # ValueErrors instead are converted to a p-value of 1.0
+        # check that values which would ordinarily give out of bounds errors
+        # instead are converted to a p-value of 1.0
         site = {'ref_F': 1, 'ref_R': 2, 'alt_F': 9, 'alt_R': 84419233}
         self.assertEqual(site_strand_bias(site), 1.0)
     
