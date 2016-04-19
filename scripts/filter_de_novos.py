@@ -82,7 +82,7 @@ def get_options():
 
 def check_denovogear_sites(de_novos_path, fails_path, fix_missing_genes=True,
         annotate_only=False):
-    '''
+    ''' load and filter sites identified by denovogear
     '''
     # load the datasets
     de_novos = pandas.read_table(de_novos_path, na_filter=False)
@@ -98,7 +98,7 @@ def check_denovogear_sites(de_novos_path, fails_path, fix_missing_genes=True,
     # get the variants that pass the filtering criteria
     pass_status = filter_denovogear_sites(de_novos, statuses & segdup_statuses)
     
-    if annotate_only:
+    if not annotate_only:
         de_novos = de_novos[pass_status]
     else:
         de_novos['pass'] = pass_status
@@ -121,7 +121,7 @@ def check_missing_indels(indels_path, fails_path, annotate_only=False):
     
     pass_status = filter_missing_indels(missing_indels) & status & segdup_status
     
-    if annotate_only:
+    if not annotate_only:
         missing_indels = missing_indels[pass_status]
     else:
         missing_indels['pass'] = pass_status
@@ -133,8 +133,13 @@ def check_missing_indels(indels_path, fails_path, annotate_only=False):
 def main():
     args = get_options()
     
-    de_novos = check_denovogear_sites(args.de_novos, args.sample_fails,
-        args.fix_missing_genes, args.annotate_only)
+    # set a blank dataframe
+    de_novos = pandas.DataFrame(columns=["person_stable_id", "chrom", "pos",
+        "ref", "alt", "symbol", "consequence", "max_af", "pp_dnm"])
+    
+    if args.de_novos is not None:
+        de_novos = check_denovogear_sites(args.de_novos, args.sample_fails,
+            args.fix_missing_genes, args.annotate_only)
     
     if args.de_novos_indels is not None:
         indels = check_missing_indels(args.de_novos_indels,
@@ -154,7 +159,7 @@ def main():
     sex = dict(zip(families['individual_id'], families['sex']))
     de_novos['sex'] = de_novos['person_stable_id'].map(sex)
     
-    de_novos = get_independent_de_novos(de_novos, args.families)
+    de_novos = get_independent_de_novos(de_novos, args.families, args.annotate_only)
     de_novos.to_csv(args.output, sep= "\t", index=False, na_value='NA')
 
 if __name__ == '__main__':
