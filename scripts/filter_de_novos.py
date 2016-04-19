@@ -150,7 +150,7 @@ def main():
     
     # include the proband sex, since this is necessary to check chrX candidates
     # for being likely pathogenic.
-    families = pandas.read_table(families_path, sep='\t')
+    families = pandas.read_table(args.families, sep='\t')
     sex = dict(zip(families['individual_id'], families['sex']))
     de_novos['sex'] = de_novos['person_stable_id'].map(sex)
     
