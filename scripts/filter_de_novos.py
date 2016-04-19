@@ -26,7 +26,7 @@ from datetime import date
 
 import pandas
 
-from denovoFilter.preliminary_filtering import preliminary_filtering
+from denovoFilter.preliminary_filtering import preliminary_filtering, check_coding
 from denovoFilter.exclude_segdups import check_segdups
 from denovoFilter.missing_symbols import fix_missing_gene_symbols
 from denovoFilter.filter_denovogear_sites import filter_denovogear_sites
