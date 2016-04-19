@@ -50,6 +50,7 @@ class TestStandardise(CompareTables):
         self.initial['child_ref_F'] = [23, 35]
         self.compare_tables(standardise_columns(self.initial), self.expected)
         
+        # if the dataframes are different, expect an error
         self.expected['pp_dnm'] = [0.0, 0.0]
         with self.assertRaises(AssertionError):
             self.compare_tables(standardise_columns(self.initial), self.expected)
