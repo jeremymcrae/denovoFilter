@@ -61,7 +61,7 @@ def test_sites(de_novos, pass_status=None):
         have an excess of parental alts.
     """
     
-    de_novos["key"] = zip(de_novos["chrom"], de_novos["pos"], de_novos["alt"])
+    de_novos["key"] = list(zip(de_novos["chrom"], de_novos["pos"], de_novos["alt"]))
     
     alleles = de_novos[["key",
         "child_ref_F", "child_ref_R", "child_alt_F", "child_alt_R",
