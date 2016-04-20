@@ -42,7 +42,7 @@ def load_segdups():
             line = line.strip().split("\t")
             chrom = line[0].strip("chr")
             start = int(line[1])
-            end = int(line[2])
+            end = int(line[2]) + 1
             
             if chrom not in segdups:
                 segdups[chrom] = IntervalTree()
