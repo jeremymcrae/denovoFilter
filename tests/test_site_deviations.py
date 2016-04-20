@@ -54,7 +54,7 @@ class TestSiteDeviations(unittest.TestCase):
                 self.assertTrue(math.isnan(x))
                 self.assertTrue(math.isnan(y))
             else:
-                self.assertEqual(x, y)
+                self.assertAlmostEqual(x, y, 15)
     
     def test_site_strand_bias(self):
         ''' check that site_strand_bias works correctly
@@ -91,7 +91,7 @@ class TestSiteDeviations(unittest.TestCase):
             self.check_series(x, y)
     
     def test_test_genes(self):
-        ''' check p-values from tests of strand and parental alt bias.
+        ''' check p-values from test of parental alt bias within genes.
         '''
         
         # one of the sites fails the strand bias filter, so this gets dropped
