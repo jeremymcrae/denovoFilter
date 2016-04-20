@@ -32,7 +32,7 @@ class TestSiteDeviations(unittest.TestCase):
         '''
         
         site = {'ref_F': 5, 'ref_R': 30, 'alt_F': 10, 'alt_R': 10}
-        self.assertEqual(site_strand_bias(site), 0.01002472259259448)
+        self.assertAlmostEqual(site_strand_bias(site), 0.010024722592, places=11)
         
         site = {'ref_F': 30, 'ref_R': 30, 'alt_F': 10, 'alt_R': 10}
         self.assertEqual(site_strand_bias(site), 1.0)
