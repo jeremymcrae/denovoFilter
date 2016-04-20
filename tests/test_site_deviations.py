@@ -54,7 +54,7 @@ class TestSiteDeviations(unittest.TestCase):
                 self.assertTrue(math.isnan(x))
                 self.assertTrue(math.isnan(y))
             else:
-                self.assertAlmostEqual(x, y, 15)
+                self.assertAlmostEqual(x, y, 14)
     
     def test_site_strand_bias(self):
         ''' check that site_strand_bias works correctly
