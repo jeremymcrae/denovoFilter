@@ -50,11 +50,15 @@ def test_sites(de_novos, pass_status=None):
     Args:
         de_novos: dataframe of de novo variants
         pass_status: whether the candidate passed prelimary filtering for MAF,
-            and segdups.
+            and segdups. Sometimes we pass in tables that include variaants that
+            failed MAF etc, since instead of filtering we want a column
+            indicating pass status. We need to exclude these variants from the
+            strand bias and parental alt checks.
     
     Returns:
-        p-value for whether the forward or reverse are biased in the proportion
-        of ref and alt alleles.
+        tuple of pandas Series, one of p-values from testing if the variants have
+        a strand bias, and the second of p-values from testing if the variants
+        have an excess of parental alts.
     """
     
     de_novos["key"] = zip(de_novos["chrom"], de_novos["pos"], de_novos["alt"])
@@ -99,14 +103,20 @@ def test_genes(de_novos, strand_bias, pass_status=None):
         of ref and alt alleles within each gene.
     """
     
+    sites = de_novos.copy()
+    
     if pass_status is not None:
-        de_novos = de_novos[pass_status].copy()
-        strand_bias = strand_bias[pass_status].copy()
+        sites = sites[pass_status]
+        strand_bias = strand_bias.copy()[pass_status]
     
     # exclude de novo SNVs that fail the strand bias filter, otherwise these
     # skew the parental alts within genes
-    sites = de_novos[(strand_bias >= P_CUTOFF) & (de_novos["ref"].str.len() == 1) &
+    sites = sites[(strand_bias >= P_CUTOFF) & (de_novos["ref"].str.len() == 1) &
         (de_novos["alt"].str.len() == 1)]
+    
+    # cover the edge case where we don't have any sites for testing
+    if len(sites) == 0:
+        return [float('nan')] * len(de_novos)
     
     sites = sites[["symbol",
         "mother_ref_F", "mother_ref_R", "mother_alt_F", "mother_alt_R",
