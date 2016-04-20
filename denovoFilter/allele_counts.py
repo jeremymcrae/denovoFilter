@@ -82,8 +82,8 @@ def get_allele_counts(variants, gene=False):
         dictionary of forward reference, forward alternate.
     """
     
-    variants = variants.drop([variants.columns[0]], axis=1)
     counts = variants.sum()
+    counts = counts.convert_objects(convert_numeric=True)
     
     # count parental alt and ref
     parent_alt = sum(counts[["mother_alt_F", "father_alt_F", "mother_alt_R", "father_alt_R"]])
