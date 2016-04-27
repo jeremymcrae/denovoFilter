@@ -34,5 +34,8 @@ def standardise_columns(de_novos):
     
     if 'pass' in de_novos.columns:
         columns.append('pass')
+    if 'strand_bias' in de_novos.columns:
+        columns += ['maf_and_dnm_check', 'in_segdup', 'strand_bias',
+            'parental_site_bias', 'parental_gene_bias', 'excess_parental_alts']
     
     return de_novos[columns].copy()

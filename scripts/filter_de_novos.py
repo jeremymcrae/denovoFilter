@@ -68,6 +68,9 @@ def get_options():
     parser.add_argument("--include-recurrent", action='store_true', default=False,
         help="Use if you want to retain recurrent de novos within a family, or "
             "within an individual (per gene).")
+    parser.add_argument("--include-metrics", action='store_true', default=False,
+        help="Use if you want to include the details of the various filtering "
+            "tests.")
     
     parser.add_argument("--output", default=sys.stdout,
         help="Path to file for filtered de novos. Defaults to standard out.")
@@ -77,7 +80,7 @@ def get_options():
     return args
 
 def check_denovogear_sites(de_novos_path, fails_path, fix_missing_genes=True,
-        annotate_only=False):
+        annotate_only=False, include_metrics=False):
     ''' load and filter sites identified by denovogear
     '''
     # load the datasets
@@ -94,7 +97,18 @@ def check_denovogear_sites(de_novos_path, fails_path, fix_missing_genes=True,
         de_novos['symbol'] = fix_missing_gene_symbols(de_novos)
     
     # get the variants that pass the filtering criteria
-    pass_status = filter_denovogear_sites(de_novos, statuses & segdup_statuses)
+    if not include_metrics:
+        pass_status = filter_denovogear_sites(de_novos, statuses & segdup_statuses)
+    else:
+        pass_status, strand_bias, parental_site_bias, parental_gene_bias, \
+            excess_alts = filter_denovogear_sites(de_novos, statuses & segdup_statuses, include_metrics)
+        
+        de_novos['maf_and_dnm_check'] = statuses
+        de_novos['in_segdup'] = segdup_statuses
+        de_novos['strand_bias'] = strand_bias
+        de_novos['parental_site_bias'] = parental_site_bias
+        de_novos['parental_gene_bias'] = parental_gene_bias
+        de_novos['excess_parental_alts'] = excess_alts
     
     if not annotate_only:
         de_novos = de_novos[pass_status]
@@ -139,7 +153,7 @@ def main():
     
     if args.de_novos is not None:
         de_novos = check_denovogear_sites(args.de_novos, args.sample_fails,
-            args.fix_missing_genes, args.annotate_only)
+            args.fix_missing_genes, args.annotate_only, args.include_metrics)
     
     if args.de_novos_indels is not None:
         indels = check_missing_indels(args.de_novos_indels,
