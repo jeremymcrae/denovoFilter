@@ -26,7 +26,7 @@ from denovoFilter.allele_counts import extract_alt_and_ref_counts, \
 from denovoFilter.site_deviations import test_sites, test_genes
 from denovoFilter.constants import P_CUTOFF
 
-def filter_denovogear_sites(de_novos, pass_status):
+def filter_denovogear_sites(de_novos, pass_status, include_metrics=False):
     """ set flags for filtering, fail samples with strand bias < threshold, or any 2 of
      (i) both parents have ALTs
      (ii) site-specific parental alts < threshold,
@@ -60,4 +60,8 @@ def filter_denovogear_sites(de_novos, pass_status):
     sites = pandas.DataFrame({"gene": gene_fail, "site": site_fail, "alts": excess_alts})
     overall_pass[sites.sum(axis=1) >= 2] = False
     
-    return overall_pass
+    if not include_metrics:
+        return overall_pass
+    else:
+        return overall_pass, strand_bias, parental_site_bias, parental_gene_bias, \
+            counts["min_parent_alt"]
