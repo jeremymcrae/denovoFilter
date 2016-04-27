@@ -65,6 +65,9 @@ def get_options():
     parser.add_argument("--annotate-only", action='store_true', default=False,
         help="Use if instead of filtering, you want to annotate all candidates"
             "for whether they pass or not.")
+    parser.add_argument("--include-recurrent", action='store_true', default=False,
+        help="Use if you want to retain recurrent de novos within a family, or "
+            "within an individual (per gene).")
     
     parser.add_argument("--output", default=sys.stdout,
         help="Path to file for filtered de novos. Defaults to standard out.")
@@ -156,7 +159,9 @@ def main():
     sex = dict(zip(families['individual_id'], families['sex']))
     de_novos['sex'] = de_novos['person_stable_id'].map(sex)
     
-    de_novos = get_independent_de_novos(de_novos, args.families, args.annotate_only)
+    if not args.include_recurrent:
+        de_novos = get_independent_de_novos(de_novos, args.families, args.annotate_only)
+    
     de_novos.to_csv(args.output, sep= "\t", index=False, na_value='NA')
 
 if __name__ == '__main__':
