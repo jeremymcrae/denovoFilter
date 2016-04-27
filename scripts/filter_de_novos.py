@@ -22,6 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 from __future__ import absolute_import
 
 import argparse
+import sys
 
 import pandas
 
@@ -65,7 +66,8 @@ def get_options():
         help="Use if instead of filtering, you want to annotate all candidates"
             "for whether they pass or not.")
     
-    parser.add_argument("--output", help="Path to file for filtered de novos.")
+    parser.add_argument("--output", default=sys.stdout,
+        help="Path to file for filtered de novos. Defaults to standard out.")
     
     args = parser.parse_args()
     
@@ -77,7 +79,9 @@ def check_denovogear_sites(de_novos_path, fails_path, fix_missing_genes=True,
     '''
     # load the datasets
     de_novos = pandas.read_table(de_novos_path, na_filter=False)
-    sample_fails = [ x.strip() for x in open(fails_path) ]
+    sample_fails = []
+    if fails_path is not None:
+        sample_fails = [ x.strip() for x in open(fails_path) ]
     
     # run some initial screening
     statuses = preliminary_filtering(de_novos, sample_fails)
@@ -104,7 +108,9 @@ def check_missing_indels(indels_path, fails_path, annotate_only=False):
     
     # load the missing indels datasets and filter for good quality sites
     missing_indels = load_missing_indels(indels_path)
-    sample_fails = [ x.strip() for x in open(fails_path) ]
+    sample_fails = []
+    if fails_path is not None:
+        sample_fails = [ x.strip() for x in open(fails_path) ]
     
     # run some initial screening
     status = preliminary_filtering(missing_indels, sample_fails, maf_cutoff=0)
