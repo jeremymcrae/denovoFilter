@@ -55,6 +55,8 @@ You can also use other optional flags:
    for whether the variants pass rather than filtering to a smaller subset. By
    default the script will exclude site which fail the filtering.
  * `--include-noncoding` to include noncoding sites in the filtered output.
+ * `--include-recurrent` to skip screening out sites which occur multiple times
+   in a family, or multiple sites in a gene in a single individual.
 
 ### Input files
 #### Definitions for the required columns in the candidate *de novos* file
