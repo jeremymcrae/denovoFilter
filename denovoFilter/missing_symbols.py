@@ -67,9 +67,9 @@ def fix_missing_gene_symbols(de_novos):
     # In spot checks, these are sufficiently distant from genes that we can't
     # add them to the analysis of their nearest gene. We shall analyse these
     # per site by giving them mock gene symbols.
-    missing = de_novos[symbols == ""]
+    missing = de_novos[symbols == ""].copy()
     fake = 'fake_symbol.' + missing['chrom'].map(str) + '_' + missing["pos"].map(str)
-    symbols[de_novos["symbol"] == ""] = fake
+    symbols[symbols == ""] = fake
     
     return symbols
 
@@ -157,8 +157,9 @@ def get_gene_id(chrom, start_pos, end_pos, build="grch37", verbose=False, attemp
         time.sleep(30)
         return get_gene_id_for_variant(chrom, start_pos, end_pos, build, verbose, attempts)
     elif status_code != 200:
-        raise ValueError("Invalid Ensembl response: {0} for {1}.\nSubmitted URL was: {2}{3}\nheaders: {4}\nresponse: {5}".format(status_code, sequence_id, \
-                base_url, ext, requested_headers, response))
+        raise ValueError("Invalid Ensembl response: {0} for {1}.\nSubmitted ' \
+            'URL was: {2}{3}\nheaders: {4}\nresponse: {5}".format(status_code,
+                sequence_id, base_url, ext, requested_headers, response))
     
     json_text = json.loads(response)
     if len(json_text) > 0:
