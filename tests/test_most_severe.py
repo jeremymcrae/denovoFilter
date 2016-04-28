@@ -38,7 +38,7 @@ class TestMostSevere(unittest.TestCase):
         self.assertEqual(get_most_severe(cq), 'stop_lost')
         
         # an empty list raises an error
-        with self.assertRaises(TypeError):
+        with self.assertRaises(IndexError):
             get_most_severe([])
         
         

@@ -58,4 +58,7 @@ def get_most_severe(consequences):
         if best_rank is None or temp_rank < best_rank:
             best_rank = temp_rank
     
+    if best_rank is None:
+        raise IndexError
+    
     return list(severity["consequence"][severity["rank"] == best_rank])[0]
