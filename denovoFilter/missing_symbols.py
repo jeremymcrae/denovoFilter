@@ -25,8 +25,10 @@ import json
 
 try:
     import urllib.request as request
+    from urllib.error import HTTPError
 except ImportError:
     import urllib2 as request
+    from urllib2 import HTTPError
 
 import pandas
 
@@ -88,7 +90,7 @@ def open_url(url, headers):
     
     try:
         handler = request.urlopen(req)
-    except Exception as e:
+    except HTTPError as e:
         handler = e
     
     status_code = handler.getcode()
@@ -97,9 +99,7 @@ def open_url(url, headers):
         response = response.decode("utf-8")
     
     # parse the headers into a key, value dictionary
-    headers = {}
-    for key, value in zip(handler.headers.keys(), handler.headers.values()):
-        headers[key.lower()] = value
+    headers = dict(zip(map(str.lower, handler.headers.keys()), handler.headers.values()))
     
     return response, status_code, headers
 

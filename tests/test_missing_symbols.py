@@ -44,6 +44,25 @@ class TestMissingSymbols(unittest.TestCase):
         
         symbols = fix_missing_gene_symbols(self.variants)
         self.assertEqual(list(symbols), ['ARID1B', 'fake_symbol.2_129119889'])
+    
+    def test_open_url(self):
+        '''
+        '''
+        
+        headers = {'content-type': 'application/json'}
+        
+        url = 'http://grch37.rest.ensembl.org/overlap/region/human/6:157528051-157528051?feature=gene'
+        response, status_code, headers = open_url(url, headers)
+        self.assertIn('external_name', response)
+        self.assertEqual(status_code, 200)
+        self.assertIn('content-length', headers)
+        
+        # a nonsense URL gives an error
+        with self.assertRaises(ValueError):
+            open_url('example', headers)
+        
+        response, status_code, headers = open_url('http://httpbin.org/status/404', headers)
+        self.assertIn(status_code, [404, 411])
         
         
         
