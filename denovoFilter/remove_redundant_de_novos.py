@@ -22,44 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import pandas
 import numpy
 
-consequences = ["transcript_ablation", "splice_donor_variant",
-    "splice_acceptor_variant", "stop_gained", "frameshift_variant",
-    "initiator_codon_variant", "stop_lost", "start_lost", "transcript_amplification",
-    'conserved_exon_terminus_variant',
-    "inframe_insertion", "inframe_deletion", "missense_variant", "protein_altering_variant",
-    "splice_region_variant", "incomplete_terminal_codon_variant",
-    "stop_retained_variant", "synonymous_variant", "coding_sequence_variant",
-    "mature_miRNA_variant", "5_prime_UTR_variant", "3_prime_UTR_variant",
-    "non_coding_exon_variant", "non_coding_transcript_exon_variant", "intron_variant",
-    "NMD_transcript_variant", "non_coding_transcript_variant",
-    "upstream_gene_variant", "downstream_gene_variant", "TFBS_ablation",
-    "TFBS_amplification", "TF_binding_site_variant",
-    "regulatory_region_ablation", "regulatory_region_amplification",
-    "regulatory_region_variant", "feature_elongation", "feature_truncation",
-    "intergenic_variant"]
-severity = pandas.DataFrame({"consequence": consequences, "rank": range(len(consequences))})
-
-def get_most_severe(consequences):
-    """ get the most severe consequence from a list of VEP consequences
-    
-    Args:
-        consequences: vector of VEP consequence strings
-    
-    Returns:
-        single string for the most severe consequence
-    """
-    
-    best_rank = None
-    
-    for consequence in consequences:
-        # get consequence and severity rank in the current transcript
-        temp_rank = int(severity["rank"][severity["consequence"] == consequence])
-        
-        # check if this is the most severe consequence; prefer HGNC transcripts
-        if best_rank is None or temp_rank < best_rank:
-            best_rank = temp_rank
-    
-    return list(severity["consequence"][severity["rank"] == best_rank])[0]
+from denovoFilter.most_severe import get_most_severe
 
 def get_person_recurrences(de_novos):
     """ remove de novos recurrent in a gene within individuals.
