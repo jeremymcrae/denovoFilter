@@ -34,6 +34,7 @@ from denovoFilter.standardise import standardise_columns
 from denovoFilter.remove_redundant_de_novos import get_independent_de_novos
 from denovoFilter.missing_indels import filter_missing_indels, load_missing_indels
 from denovoFilter.change_last_base_sites import change_conserved_last_base_consequence
+from denovoFilter.tidy_consequences import tidy_consequence_and_gene_symbols
 
 def get_options():
     """ get the command line options
@@ -85,6 +86,8 @@ def check_denovogear_sites(de_novos_path, fails_path, fix_missing_genes=True,
     '''
     # load the datasets
     de_novos = pandas.read_table(de_novos_path, na_filter=False)
+    de_novos = tidy_consequence_and_gene_symbols(de_novos)
+    
     sample_fails = []
     if fails_path is not None:
         sample_fails = [ x.strip() for x in open(fails_path) ]
