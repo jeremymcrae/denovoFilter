@@ -61,7 +61,7 @@ class TestMissingSymbols(unittest.TestCase):
         with self.assertRaises(ValueError):
             open_url('example', headers)
         
-        response, status_code, headers = open_url('http://httpbin.org/status/404', headers)
+        response, status_code, headers = open_url('https://httpbin.org/status/404', headers)
         self.assertIn(status_code, [404, 411])
         
         
