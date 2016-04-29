@@ -160,7 +160,13 @@ def main():
     de_novos['sex'] = de_novos['person_stable_id'].map(sex)
     
     if not args.include_recurrent:
-        de_novos = get_independent_de_novos(de_novos, args.families, args.annotate_only)
+        family_ids = dict(zip(families['individual_id'], families['family_id']))
+        independent = check_independence(de_novos, family_ids, args.annotate_only)
+        
+        if args.annotate_only:
+            de_novos['pass'] = de_novos['pass'] & independent
+        else:
+            de_novos = de_novos[independent]
     
     de_novos.to_csv(args.output, sep= "\t", index=False, na_value='NA')
 

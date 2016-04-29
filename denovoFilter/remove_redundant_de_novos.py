@@ -24,8 +24,8 @@ import numpy
 
 from denovoFilter.most_severe import get_most_severe
 
-def get_person_recurrences(de_novos):
-    """ remove de novos recurrent in a gene within individuals.
+def person_recurrence(de_novos):
+    """ identify de novos recurrent in a gene within individuals.
     
     Find the de novos that are recurrent within a single individual in a
     single gene. We shall treat these as a single de novo event. Prioritise
@@ -36,7 +36,7 @@ def get_person_recurrences(de_novos):
         de_novos: dataframe of de novo variants
     
     Returns:
-        pandas Series for whether each canddiate is a duplicate of not
+        pandas Series for whether each candidate is a duplicate or not
     """
     
     # find the variants which are recurrent within a person in a single gene
@@ -64,38 +64,39 @@ def get_person_recurrences(de_novos):
     
     return person_dups
 
-def get_independent_de_novos(de_novos, families_path, annotate_only=False):
-    """ exclude de novos that would otherwise lead to double counting.
-    
-    Remove de novos that are shared between multiple probands of a family or
-    that are recurrent in a single gene in a single person.
+def family_recurrence(de_novos, family_ids):
+    ''' identify de novos recurrent within a family.
     
     Args:
         de_novos: dataframe of de novo variants
-        families_path: path to pedigree file for cohort.
-        annotate_only: whether to annotate the canddiate
+        family_ids: dictionary of family IDs, indexed by individual IDs.
     
     Returns:
-        dataframe with duplicated sites removed
+        pandas Series for whether each candidate is a duplicate or not
+    '''
+    
+    # restrict ourselves to the the first de novo for each family. This is
+    # randomly ordered, it might be better to select the older probands.
+    families = de_novos[["chrom", "pos", "ref", "alt"]].copy()
+    families['family_id'] = de_novos['person_stable_id'].map(family_ids)
+    
+    return families.duplicated()
+
+def check_independence(de_novos, family_ids):
+    """ identify de novos that would otherwise lead to double counting.
+    
+    This is so we can remove de novos that are shared between multiple probands
+    of a family or that are recurrent in a single gene in a single person.
+    
+    Args:
+        de_novos: dataframe of de novo variants
+        family_ids: dictionary of family IDs, indexed by individual IDs.
+    
+    Returns:
+        pandas Series indicating whether each site is independent
     """
     
-    families = pandas.read_table(families_path, na_filter=False)
-    families = dict(zip(families['individual_id'], families['family_id']))
-    de_novos['family_id'] = de_novos['person_stable_id'].map(families)
+    family_dups = family_recurrence(de_novos, family_ids)
+    person_dups = person_recurrence(de_novos)
     
-    # restrict ourselves to the non-duplicates (this retains the first de novo
-    # for each family)
-    family_dups = de_novos[["family_id", "chrom", "pos", "ref", "alt"]].duplicated()
-    person_dups = get_person_recurrences(de_novos)
-    
-    # find the candidates which are not duplicates
-    non_dup = ~family_dups & ~person_dups
-    
-    if not annotate_only:
-        de_novos = de_novos[non_dup]
-    else:
-        de_novos['pass'] = de_novos['pass'] & non_dup
-    
-    de_novos = de_novos.drop('family_id', axis=1)
-    
-    return de_novos
+    return ~family_dups & ~person_dups
