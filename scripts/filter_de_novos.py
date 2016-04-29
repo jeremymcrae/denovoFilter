@@ -81,14 +81,16 @@ def main():
     de_novos = pandas.DataFrame(columns=["person_stable_id", "chrom", "pos",
         "ref", "alt", "symbol", "consequence", "max_af", "pp_dnm"])
     
-    if args.de_novos is not None:
-        de_novos = screen_candidates(args.de_novos, args.sample_fails,
-            filter_denovogear_sites, 0.01, args.fix_missing_genes, args.annotate_only)
+    denovogear = screen_candidates(args.de_novos, args.sample_fails,
+        filter_denovogear_sites, maf=0.01, fix_symbols=args.fix_missing_genes,
+        annotate_only=args.annotate_only)
     
-    if args.de_novos_indels is not None:
-        indels = screen_candidates(args.de_novos_indels, args.sample_fails_indels,
-            filter_missing_indels, 0.0, args.fix_missing_genes, args.annotate_only)
-        de_novos = de_novos.append(indels, ignore_index=True)
+    indels = screen_candidates(args.de_novos_indels, args.sample_fails_indels,
+        filter_missing_indels, maf=0.0, fix_symbols=args.fix_missing_genes,
+        annotate_only=args.annotate_only)
+    
+    de_novos = de_novos.append(denovogear, ignore_index=True)
+    de_novos = de_novos.append(indels, ignore_index=True)
     
     if not args.include_noncoding and not args.annotate_only:
         # make sure we are only looking at sites within coding regions
@@ -105,7 +107,7 @@ def main():
     
     if not args.include_recurrent:
         family_ids = dict(zip(families['individual_id'], families['family_id']))
-        independent = check_independence(de_novos, family_ids, args.annotate_only)
+        independent = check_independence(de_novos, family_ids)
         
         if args.annotate_only:
             de_novos['pass'] = de_novos['pass'] & independent
