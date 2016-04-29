@@ -31,7 +31,7 @@ from denovoFilter.exclude_segdups import check_segdups
 from denovoFilter.missing_symbols import fix_missing_gene_symbols
 from denovoFilter.filter_denovogear_sites import filter_denovogear_sites
 from denovoFilter.standardise import standardise_columns
-from denovoFilter.remove_redundant_de_novos import get_independent_de_novos
+from denovoFilter.check_independence import check_independence
 from denovoFilter.missing_indels import filter_missing_indels, load_missing_indels
 from denovoFilter.change_last_base_sites import change_conserved_last_base_consequence
 
