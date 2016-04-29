@@ -93,4 +93,7 @@ class TestMissingSymbols(unittest.TestCase):
         with self.assertRaises(ValueError):
             get_gene_id('NOTCHROM', 'AAAA', 'BBBB')
         
+        with self.assertRaises(ValueError):
+            get_gene_id('6', 157528051, 157528051, attempts=6)
+        
     
