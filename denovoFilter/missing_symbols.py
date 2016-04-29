@@ -103,12 +103,11 @@ def open_url(url, headers):
     
     return response, status_code, headers
 
-def rate_limit_requests():
+def rate_limit_requests(rate_limit=0.0667):
     """ limit ensembl requests to one per 0.067 s
     """
     
     global PREV_TIME
-    rate_limit = 0.0667
     
     diff = time.time() - PREV_TIME
     if diff < rate_limit:
@@ -157,9 +156,9 @@ def get_gene_id(chrom, start_pos, end_pos, build="grch37", verbose=False, attemp
         time.sleep(30)
         return get_gene_id_for_variant(chrom, start_pos, end_pos, build, verbose, attempts)
     elif status_code != 200:
-        raise ValueError("Invalid Ensembl response: {0} for {1}.\nSubmitted ' \
-            'URL was: {2}{3}\nheaders: {4}\nresponse: {5}".format(status_code,
-                sequence_id, base_url, ext, requested_headers, response))
+        raise ValueError('Invalid Ensembl response: {0}.\nSubmitted '
+            'URL was: {1}{2}\nheaders: {3}\nresponse: {4}'.format(status_code,
+                base_url, ext, requested_headers, response))
     
     json_text = json.loads(response)
     if len(json_text) > 0:
