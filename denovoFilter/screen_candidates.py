@@ -37,7 +37,8 @@ def screen_candidates(de_novos_path, fails_path, filter_function, maf=0.01,
             filter_denovogear_sites(), or filter_missing_indels().
         maf: MAF threshold for filtering. This is 0.01 for denovogear sites,
             and 0 for the missing indels.
-        fix_missing_genes: whether to annotate GHGNC symbols for candidates missing these.
+        fix_missing_genes: whether to annotate HGNC symbols for candidates
+            missing these.
         annotate_only: whether to include a column indicating pass status, rather
             than excluding all candidates which fail the filtering.
     
@@ -53,18 +54,16 @@ def screen_candidates(de_novos_path, fails_path, filter_function, maf=0.01,
     
     # run some initial screening
     status = preliminary_filtering(de_novos, sample_fails, maf_cutoff=maf)
-    segdup_status = check_segdups(de_novos)
+    segdup = check_segdups(de_novos)
     
     if fix_missing_genes:
         de_novos['symbol'] = fix_missing_gene_symbols(de_novos)
     
-    pass_status = filter_function(de_novos) & status & segdup_status
+    pass_status = filter_function(de_novos, status & segdup) & status & segdup
     
-    if not annotate_only:
-        de_novos = de_novos[pass_status]
-    else:
+    if annotate_only:
         de_novos['pass'] = pass_status
+    else:
+        de_novos = de_novos[pass_status]
     
-    de_novos = standardise_columns(de_novos)
-    
-    return de_novos
+    return standardise_columns(de_novos)
