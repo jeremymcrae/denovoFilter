@@ -26,15 +26,11 @@ import sys
 
 import pandas
 
-from denovoFilter.load_candidates import load_candidates
-from denovoFilter.preliminary_filtering import preliminary_filtering, check_coding
-from denovoFilter.exclude_segdups import check_segdups
-from denovoFilter.missing_symbols import fix_missing_gene_symbols
+from denovoFilter.screen_candidates import screen_candidates
 from denovoFilter.filter_denovogear_sites import filter_denovogear_sites
-from denovoFilter.standardise import standardise_columns
-from denovoFilter.check_independence import check_independence
 from denovoFilter.missing_indels import filter_missing_indels
 from denovoFilter.change_last_base_sites import change_conserved_last_base_consequence
+from denovoFilter.check_independence import check_independence
 
 def get_options():
     """ get the command line options
@@ -76,90 +72,6 @@ def get_options():
     args = parser.parse_args()
     
     return args
-
-def screen_candidates(de_novos_path, fails_path, filter_function,
-        fix_missing_genes=True, annotate_only=False):
-    """ load and optionally filter candidate de novo mutations.
-    
-    Args:
-        de_novos_path: path to table of unfiltered canddiate DNMs
-        fails_path: path to file listing samples which failed QC, and therefore
-            all of their candidates need to be excluded.
-        filter_function: function for filtering the candidates, either
-            filter_denovogear_sites(), or filter_missing_indels().
-        fix_missing_genes: whether to annotate GHGNC symbols for candidates missing these.
-        annotate_only: whether to include a column indicating pass status, rather
-            than excluding all candidates which fail the filtering.
-    
-    Returns:
-        pandas DataFrame of candidate de novo mutations.
-    """
-    
-    # load the datasets
-    de_novos = load_candidates(de_novos_path)
-    sample_fails = []
-    if fails_path is not None:
-        sample_fails = [ x.strip() for x in open(fails_path) ]
-    
-    # run some initial screening
-    status = preliminary_filtering(de_novos, sample_fails, maf_cutoff=0)
-    segdup_status = check_segdups(de_novos)
-    
-    if fix_missing_genes:
-        de_novos['symbol'] = fix_missing_gene_symbols(de_novos)
-    
-    pass_status = filter_function(de_novos) & status & segdup_status
-    
-    if not annotate_only:
-        de_novos = de_novos[pass_status]
-    else:
-        de_novos['pass'] = pass_status
-    
-    de_novos = standardise_columns(de_novos)
-    
-    return de_novos
-
-def screen_candidates(de_novos_path, fails_path, filter_function,
-        fix_missing_genes=True, annotate_only=False):
-    """ load and optionally filter candidate de novo mutations.
-    
-    Args:
-        de_novos_path: path to table of unfiltered canddiate DNMs
-        fails_path: path to file listing samples which failed QC, and therefore
-            all of their candidates need to be excluded.
-        filter_function: function for filtering the candidates, either
-            filter_denovogear_sites(), or filter_missing_indels().
-        fix_missing_genes: whether to annotate GHGNC symbols for candidates missing these.
-        annotate_only: whether to include a column indicating pass status, rather
-            than excluding all candidates which fail the filtering.
-    
-    Returns:
-        pandas DataFrame of candidate de novo mutations.
-    """
-    
-    # load the datasets
-    de_novos = load_candidates(de_novos_path)
-    sample_fails = []
-    if fails_path is not None:
-        sample_fails = [ x.strip() for x in open(fails_path) ]
-    
-    # run some initial screening
-    status = preliminary_filtering(de_novos, sample_fails, maf_cutoff=0)
-    segdup_status = check_segdups(de_novos)
-    
-    if fix_missing_genes:
-        de_novos['symbol'] = fix_missing_gene_symbols(de_novos)
-    
-    pass_status = filter_function(de_novos) & status & segdup_status
-    
-    if not annotate_only:
-        de_novos = de_novos[pass_status]
-    else:
-        de_novos['pass'] = pass_status
-    
-    de_novos = standardise_columns(de_novos)
-    
-    return de_novos
 
 def main():
     args = get_options()
