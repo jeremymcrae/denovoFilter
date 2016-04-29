@@ -26,7 +26,7 @@ from denovoFilter.allele_counts import extract_alt_and_ref_counts, \
 from denovoFilter.site_deviations import test_sites, test_genes
 from denovoFilter.constants import P_CUTOFF
 
-def filter_denovogear_sites(de_novos, pass_status):
+def filter_denovogear_sites(de_novos, status):
     """ set flags for filtering, fail samples with strand bias < threshold, or any 2 of
      (i) both parents have ALTs
      (ii) site-specific parental alts < threshold,
@@ -34,6 +34,7 @@ def filter_denovogear_sites(de_novos, pass_status):
     
     Args:
         de_novos: dataframe of de novo variants
+        status: list (or pandas Series) or boolea
     
     Returns:
         vector of true/false for whether each variant passes the filters
@@ -43,8 +44,8 @@ def filter_denovogear_sites(de_novos, pass_status):
     recurrent = get_recurrent_genes(de_novos)
     
     # check if sites deviate from expected strand bias and parental alt depths
-    strand_bias, parental_site_bias = test_sites(counts, pass_status)
-    parental_gene_bias = test_genes(counts, strand_bias, pass_status)
+    strand_bias, parental_site_bias = test_sites(counts, status)
+    parental_gene_bias = test_genes(counts, strand_bias, status)
     
     # fail SNVs with excessive strand bias. Don't check strand bias in indels.
     overall_pass = (strand_bias >= P_CUTOFF) | (de_novos["ref"].str.len() != 1) | \
