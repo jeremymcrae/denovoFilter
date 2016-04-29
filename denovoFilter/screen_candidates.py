@@ -25,7 +25,7 @@ from denovoFilter.exclude_segdups import check_segdups
 from denovoFilter.missing_symbols import fix_missing_gene_symbols
 from denovoFilter.standardise import standardise_columns
 
-def screen_candidates(de_novos_path, fails_path, filter_function,
+def screen_candidates(de_novos_path, fails_path, filter_function, maf=0.01,
         fix_missing_genes=True, annotate_only=False):
     """ load and optionally filter candidate de novo mutations.
     
@@ -35,6 +35,8 @@ def screen_candidates(de_novos_path, fails_path, filter_function,
             all of their candidates need to be excluded.
         filter_function: function for filtering the candidates, either
             filter_denovogear_sites(), or filter_missing_indels().
+        maf: MAF threshold for filtering. This is 0.01 for denovogear sites,
+            and 0 for the missing indels.
         fix_missing_genes: whether to annotate GHGNC symbols for candidates missing these.
         annotate_only: whether to include a column indicating pass status, rather
             than excluding all candidates which fail the filtering.
@@ -50,7 +52,7 @@ def screen_candidates(de_novos_path, fails_path, filter_function,
         sample_fails = [ x.strip() for x in open(fails_path) ]
     
     # run some initial screening
-    status = preliminary_filtering(de_novos, sample_fails, maf_cutoff=0)
+    status = preliminary_filtering(de_novos, sample_fails, maf_cutoff=maf)
     segdup_status = check_segdups(de_novos)
     
     if fix_missing_genes:

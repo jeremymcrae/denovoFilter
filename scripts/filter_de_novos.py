@@ -86,7 +86,7 @@ def main():
     
     if args.de_novos_indels is not None:
         indels = screen_candidates(args.de_novos_indels, args.sample_fails_indels,
-            filter_missing_indels, args.fix_missing_genes, args.annotate_only)
+            filter_missing_indels, maf=0, args.fix_missing_genes, args.annotate_only)
         de_novos = de_novos.append(indels, ignore_index=True)
     
     if not args.include_noncoding and not args.annotate_only:
