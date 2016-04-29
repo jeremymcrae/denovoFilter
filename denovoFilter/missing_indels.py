@@ -19,33 +19,8 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
-import pandas
-
-from denovoFilter.preliminary_filtering import preliminary_filtering
-from denovoFilter.exclude_segdups import check_segdups
 from denovoFilter.allele_counts import extract_alt_and_ref_counts, \
     get_depths_and_proportions
-
-def load_missing_indels(candidates_path):
-    """ load the missed candidates dataset
-    
-    Args:
-        candidates_path:
-        families_path:
-    
-    Returns:
-        pandas dataframe of candidate de novo sites
-    """
-    
-    missed = pandas.read_table(candidates_path, na_filter=False)
-    
-    # rename columns so that later processing works smoothly
-    missed["in_child_vcf"] = 1
-    missed["in_mother_vcf"] = 0
-    missed["in_father_vcf"] = 0
-    missed["pp_dnm"] = None
-    
-    return missed
 
 def filter_missing_indels(candidates):
     """ filter the candidate missing indels.
