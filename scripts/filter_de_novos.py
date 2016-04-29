@@ -27,6 +27,7 @@ import sys
 import pandas
 
 from denovoFilter.screen_candidates import screen_candidates
+from denovoFilter.preliminary_filtering import check_coding
 from denovoFilter.filter_denovogear_sites import filter_denovogear_sites
 from denovoFilter.missing_indels import filter_missing_indels
 from denovoFilter.change_last_base_sites import change_conserved_last_base_consequence

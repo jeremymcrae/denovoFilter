@@ -20,7 +20,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
 from denovoFilter.load_candidates import load_candidates
-from denovoFilter.preliminary_filtering import preliminary_filtering, check_coding
+from denovoFilter.preliminary_filtering import preliminary_filtering
 from denovoFilter.exclude_segdups import check_segdups
 from denovoFilter.missing_symbols import fix_missing_gene_symbols
 from denovoFilter.standardise import standardise_columns
