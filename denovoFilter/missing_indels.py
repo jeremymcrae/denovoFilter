@@ -22,7 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 from denovoFilter.allele_counts import extract_alt_and_ref_counts, \
     get_depths_and_proportions
 
-def filter_missing_indels(candidates):
+def filter_missing_indels(candidates, *args):
     """ filter the candidate missing indels.
     
     We have a set of sites that have been called in the child, but not in the
