@@ -93,14 +93,12 @@ def main():
     de_novos = de_novos.append(indels, ignore_index=True)
     
     if not args.include_noncoding and not args.annotate_only:
-        # make sure we are only looking at sites within coding regions
         de_novos = de_novos[check_coding(de_novos)]
     
     if args.last_base_sites is not None:
         de_novos = change_conserved_last_base_consequence(de_novos, args.last_base_sites)
     
-    # include the proband sex, since this is necessary to check chrX candidates
-    # for being likely pathogenic.
+    # include sex, to later check if chrX candidates are likely pathogenic.
     families = pandas.read_table(args.families, sep='\t')
     sex = dict(zip(families['individual_id'], families['sex']))
     de_novos['sex'] = de_novos['person_stable_id'].map(sex)
