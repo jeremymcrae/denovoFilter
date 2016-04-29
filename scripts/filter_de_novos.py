@@ -82,7 +82,7 @@ def main():
     
     if args.de_novos is not None:
         de_novos = screen_candidates(args.de_novos, args.sample_fails,
-            filter_denovogear_sites, args.fix_missing_genes, args.annotate_only)
+            filter_denovogear_sites, 0.01, args.fix_missing_genes, args.annotate_only)
     
     if args.de_novos_indels is not None:
         indels = screen_candidates(args.de_novos_indels, args.sample_fails_indels,
