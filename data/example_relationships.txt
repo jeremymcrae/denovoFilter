@@ -1,0 +1,2 @@
+family_id	individual_id	sex
+fam_01	sample_01	M
