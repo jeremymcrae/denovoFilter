@@ -24,7 +24,8 @@ import pandas
 from denovoFilter.allele_counts import extract_alt_and_ref_counts, \
     get_recurrent_genes
 from denovoFilter.site_deviations import test_sites, test_genes
-from denovoFilter.constants import P_CUTOFF
+from denovoFilter.min_depth import min_depth
+from denovoFilter.constants import P_CUTOFF, ERROR_RATE
 
 def filter_denovogear_sites(de_novos, status):
     """ set flags for filtering, fail samples with strand bias < threshold, or any 2 of
@@ -55,7 +56,12 @@ def filter_denovogear_sites(de_novos, status):
     # fail sites with gene-specific parental alts, only if >1 sites called per gene
     gene_fail = (parental_gene_bias < P_CUTOFF) & de_novos["symbol"].isin(recurrent)
     site_fail = (parental_site_bias < P_CUTOFF)
-    excess_alts = counts["min_parent_alt"] > 0
+    
+    counts['dad_depth'] = counts[['father_ref_F', 'father_ref_R', 'father_alt_F', 'father_alt_R']].sum(axis=1)
+    counts['mom_depth'] = counts[['mother_ref_F', 'mother_ref_R', 'mother_alt_F', 'mother_alt_R']].sum(axis=1)
+    counts['parental_depth_threshold'] = counts[['dad_depth', 'mom_depth']].apply(min_depth, error=ERROR_RATE, axis=1)
+    
+    excess_alts = counts["min_parent_alt"] > counts['parental_depth_threshold']
     
     # exclude sites that fail two of three classes
     sites = pandas.DataFrame({"gene": gene_fail, "site": site_fail, "alts": excess_alts})
