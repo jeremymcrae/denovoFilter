@@ -31,21 +31,21 @@ class TestMinDepth(unittest.TestCase):
         ''' test estimating the minumum allowed depth
         '''
         
-        self.assertEqual(min_depth(0.01, 100), 2)
-        self.assertEqual(min_depth(0.03, 150), 7)
+        self.assertEqual(min_depth(100, 0.01), 2)
+        self.assertEqual(min_depth(150, 0.03), 7)
         
         # and try modulating the certainty threshold
-        self.assertEqual(min_depth(0.03, 150, threshold=0.5), 3)
-        self.assertEqual(min_depth(0.03, 150, threshold=0.999), 9)
+        self.assertEqual(min_depth(150, 0.03, threshold=0.5), 3)
+        self.assertEqual(min_depth(150, 0.03, threshold=0.999), 9)
     
     def test_min_depth_data_types(self):
         ''' test that min_depth works on numerous data types
         '''
         
-        self.assertEqual(min_depth(0.03, [75, 150]), 5)
-        self.assertEqual(min_depth(0.03, (75, 150)), 5)
-        self.assertEqual(min_depth(0.03, numpy.array([75, 150])), 5)
-        self.assertEqual(min_depth(0.03, pandas.Series([75, 150])), 5)
+        self.assertEqual(min_depth([75, 150], 0.03), 5)
+        self.assertEqual(min_depth((75, 150), 0.03), 5)
+        self.assertEqual(min_depth(numpy.array([75, 150]), 0.03), 5)
+        self.assertEqual(min_depth(pandas.Series([75, 150]), 0.03), 5)
     
     def test_min_depth_errors(self):
         ''' test that min depth raises appropriate errors
@@ -53,6 +53,6 @@ class TestMinDepth(unittest.TestCase):
         
         with self.assertRaises(AssertionError):
             # raise errors with non-standard lengths of depths
-            min_depth(0.03, [75, 150, 50])
-            min_depth(0.03, [75])
-            min_depth(0.03, [])
+            min_depth([75, 150, 50], 0.03)
+            min_depth([75], 0.03)
+            min_depth([], 0.03)

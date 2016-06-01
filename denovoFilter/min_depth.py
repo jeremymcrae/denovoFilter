@@ -21,7 +21,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 from scipy.stats import binom
 
-def min_depth(error, depth, threshold=0.98):
+def min_depth(depth, error, threshold=0.98):
     '''  determine the maximum parental depth permitted from both parents
     
     We look at the minimum alternate depth across both parents. We need this to
