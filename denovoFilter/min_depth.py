@@ -28,33 +28,46 @@ def min_depth(depth, error, threshold=0.98):
     be low. This function determines how low we can set this and still capture
     the vast majority of true candidate de novo mutations.
     
+    There are four posible scenarios:
+        1) both parents have depths below or equal to the depth
+        2) the first parent exceeds the depth but the second parent does not
+        3) the second parent exceeds the depth but the first parent does not
+        4) both parents exceed the depth.
+    
+    We only need to consider the fourth scenario. The probability that this
+    happens (at a given depth) is 1 - prob(first parent exceeds) * prob(second
+    parent exceeds). We repeatedly increment the depth threshold upwards until
+    this probability is sufficiently high.
+    
     Args:
         depth: depth of parental sequencing. Can either be a single value (as a
             summary value for both parents), or a list of two depths, one for
             each parent.
         error: site-specific error rate (e.g. 0.002)
-        threshold: probability threshold that we are wanting to exceed. We look for
-            a alt count where the probability exceeds this value. Assuming the
-            value is 0.98, then 98% of cases will have a min depth less than the
-            returned count.
+        threshold: probability threshold that we are wanting to exceed. We look
+            for a alt count where the probability exceeds this value. Assuming
+            the value is 0.98, then 98% of cases will have a min depth less than
+            the returned count.
     
     Returns:
         maximum permitted alternate depth across both parents.
     '''
     
+    # convert int variables to a list, so we don't need code specific to ints
+    try:
+        depth = [int(depth), int(depth)]
+    except TypeError:
+        pass
+    
+    # raise an error if the length is not two.
+    assert len(depth) == 2
+    
     x = 0
     while True:
-        try:
-            product = 1
-            for i in depth:
-                product *= binom.sf(x, i, error)
-            prob = 1 - product
-            
-            # raise an error if the length is not two. This will not be a
-            # problem for ints, which have been caught already.
-            assert len(depth) == 2
-        except TypeError:
-            prob = 1 - (binom.sf(x, depth, error))**2
+        product = 1
+        for i in depth:
+            product *= binom.sf(x, i, error)
+        prob = 1 - product
         
         if prob > threshold:
             return(x)
