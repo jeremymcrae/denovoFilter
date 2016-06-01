@@ -85,8 +85,6 @@ class TestFilterDenovogearSites(unittest.TestCase):
         status = filter_denovogear_sites(self.variants, initial)
         self.assertTrue(all(status == Series([False, True])))
         
-        print('\nzzz\n')
-        
         # define a site which only fails one of the filtering criteria, an
         # extreme parental alt bias at a site.
         self.variants['pos'] = [1, 2]
@@ -95,6 +93,5 @@ class TestFilterDenovogearSites(unittest.TestCase):
         self.variants['dp4_father'] = ['10,10,0,0', '100,100,0,0']
         
         status = filter_denovogear_sites(self.variants, initial)
-        print('STATUS: {}'.format(list(status)))
         self.assertTrue(all(status == Series([True, True])))
     
