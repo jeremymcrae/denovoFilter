@@ -61,6 +61,7 @@ def min_depth(depth, error, threshold=0.98):
     
     # raise an error if the length is not two.
     assert len(depth) == 2
+    assert 0.0 < threshold < 1.0
     
     x = 0
     while True:

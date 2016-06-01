@@ -56,3 +56,6 @@ class TestMinDepth(unittest.TestCase):
             min_depth([75, 150, 50], 0.03)
             min_depth([75], 0.03)
             min_depth([], 0.03)
+            
+            # raise an error with an unobtainable certainty threshold
+            min_depth(75, 0.01, 1.0)
