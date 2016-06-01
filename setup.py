@@ -23,7 +23,7 @@ from setuptools import setup
 
 setup(
     name = "denovoFilter",
-    version = "0.2.0",
+    version = "0.3.0",
     author = "Jeremy McRae",
     author_email = "jeremy.mcrae@sanger.ac.uk",
     description = ("Filtering candidate de novo variants."),
