@@ -30,7 +30,7 @@ consequences = ["transcript_ablation", "splice_donor_variant",
     "stop_retained_variant", "synonymous_variant", "coding_sequence_variant",
     "mature_miRNA_variant", "5_prime_UTR_variant", "3_prime_UTR_variant",
     "non_coding_exon_variant", "non_coding_transcript_exon_variant", "intron_variant",
-    "NMD_transcript_variant", "non_coding_transcript_variant",
+    "NMD_transcript_variant", "non_coding_transcript_variant", "nc_transcript_variant",
     "upstream_gene_variant", "downstream_gene_variant", "TFBS_ablation",
     "TFBS_amplification", "TF_binding_site_variant",
     "regulatory_region_ablation", "regulatory_region_amplification",
@@ -47,6 +47,9 @@ def get_most_severe(consequences):
     Returns:
         single string for the most severe consequence
     """
+    
+    if consequences is None:
+        return None
     
     best_rank = None
     
