@@ -19,6 +19,8 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
+from pandas import Series
+
 def fix_maf(max_af):
     """ cleans up the max AF entries in the de novo dataframe
     
@@ -32,14 +34,20 @@ def fix_maf(max_af):
     
     max_af = max_af.copy()
     
-    # one de novo has a comma separated list of MAF values (both above 0.1)
-    max_af[max_af.str.contains(",")] = 1
+    # some de novos have comma-separated lists of maf values. We select the
+    # first value (which correspononds to the alternate allele, the additional
+    # alleles are from denovogear selecting all possibly alternates at a
+    # candidate de novo site)
+    max_af = [ x.split(',')[0] if type(x) == str else None for x in max_af ]
     
-    # fix the blank and null max AF values
-    max_af[(max_af == "") | (max_af == ".") | (max_af == "missing")] = 0
-    max_af = max_af.convert_objects(convert_numeric=True)
+    # fix the null max AF values
+    missing = set(['', '.', 'missing'])
+    max_af = [ x if x not in missing else 0 for x in max_af ]
     
-    return max_af
+    # replace missing maf values, and convert everything to floats
+    max_af = [ float(x) if x is not None else 0.0 for x in max_af ]
+    
+    return Series(max_af)
 
 def preliminary_filtering(de_novos, sample_fails=None, maf_cutoff=0.01):
     """run some preliminary filtering of de novos.
