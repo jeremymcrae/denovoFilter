@@ -38,14 +38,11 @@ def fix_maf(max_af):
     # first value (which correspononds to the alternate allele, the additional
     # alleles are from denovogear selecting all possibly alternates at a
     # candidate de novo site)
-    max_af = [ x.split(',')[0] if type(x) == str else None for x in max_af ]
+    max_af = [ str(x).split(',')[0] for x in max_af ]
     
-    # fix the null max AF values
-    missing = set(['', '.', 'missing'])
-    max_af = [ x if x not in missing else 0 for x in max_af ]
-    
-    # replace missing maf values, and convert everything to floats
-    max_af = [ float(x) if x is not None else 0.0 for x in max_af ]
+    # fix the null max AF values, and convert everything to floats
+    missing = set(['', '.', 'missing', 'nan', 'None', 'NA'])
+    max_af = [ float(x) if x not in missing else 0.0 for x in max_af ]
     
     return Series(max_af)
 

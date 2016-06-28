@@ -41,9 +41,11 @@ class TestPreliminaryFiltering(unittest.TestCase):
         ''' test that fix_maf works correctly
         '''
         
-        values = Series(['0.001', '0.2,0.3', '', '.', 'missing', None])
+        values = Series(['0.001', '0.2,0.3', '', '.', 'missing', 0.5,
+            None, float('nan'), 'NA'])
         
-        self.assertTrue(all(fix_maf(values) == Series([0.001, 0.2, 0, 0, 0, 0])))
+        self.assertTrue(all(fix_maf(values) == Series([0.001, 0.2, 0, 0, 0,
+            0.5, 0, 0, 0])))
     
     def test_preliminary_filtering(self):
         ''' test that preliminary_filtering works correctly.
