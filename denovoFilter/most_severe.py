@@ -19,8 +19,6 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
-import pandas
-
 consequences = ["transcript_ablation", "splice_donor_variant",
     "splice_acceptor_variant", "stop_gained", "frameshift_variant",
     "initiator_codon_variant", "stop_lost", "start_lost", "transcript_amplification",
@@ -36,13 +34,13 @@ consequences = ["transcript_ablation", "splice_donor_variant",
     "regulatory_region_ablation", "regulatory_region_amplification",
     "regulatory_region_variant", "feature_elongation", "feature_truncation",
     "intergenic_variant"]
-severity = pandas.DataFrame({"consequence": consequences, "rank": range(len(consequences))})
+severity = dict(zip(consequences, range(len(consequences))))
 
 def get_most_severe(consequences):
     """ get the most severe consequence from a list of VEP consequences
     
     Args:
-        consequences: vector of VEP consequence strings
+        consequences: list of VEP consequence strings
     
     Returns:
         single string for the most severe consequence
@@ -51,17 +49,14 @@ def get_most_severe(consequences):
     if consequences is None:
         return None
     
-    best_rank = None
+    most_severe = None
     
     for consequence in consequences:
-        # get consequence and severity rank in the current transcript
-        temp_rank = int(severity["rank"][severity["consequence"] == consequence])
-        
         # check if this is the most severe consequence; prefer HGNC transcripts
-        if best_rank is None or temp_rank < best_rank:
-            best_rank = temp_rank
+        if most_severe is None or severity[consequence] < severity[most_severe]:
+            most_severe = consequence
     
-    if best_rank is None:
+    if most_severe is None:
         raise IndexError
     
-    return list(severity["consequence"][severity["rank"] == best_rank])[0]
+    return most_severe
