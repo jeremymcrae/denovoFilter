@@ -86,7 +86,7 @@ def main():
         annotate_only=args.annotate_only)
     
     indels = screen_candidates(args.de_novos_indels, args.sample_fails_indels,
-        filter_missing_indels, maf=0.0, fix_symbols=args.fix_missing_genes,
+        filter_missing_indels, maf=0.0001, fix_symbols=args.fix_missing_genes,
         annotate_only=args.annotate_only)
     
     de_novos = de_novos.append(denovogear, ignore_index=True)
@@ -112,7 +112,7 @@ def main():
         else:
             de_novos = de_novos[independent]
     
-    de_novos.to_csv(args.output, sep= "\t", index=False, na_value='NA')
+    de_novos.to_csv(args.output, sep= "\t", index=False, na_rep='NA')
 
 if __name__ == '__main__':
     main()
