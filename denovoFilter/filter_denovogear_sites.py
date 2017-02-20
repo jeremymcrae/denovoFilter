@@ -44,6 +44,17 @@ def filter_denovogear_sites(de_novos, status):
     counts = extract_alt_and_ref_counts(de_novos)
     recurrent = get_recurrent_genes(de_novos)
     
+    counts['child_alts'] = counts[['child_alt_F', 'child_alt_R']].sum(axis=1)
+    counts['child_depth'] = counts[['child_ref_F', 'child_ref_R', 'child_alt_F', 'child_alt_R']].sum(axis=1)
+    counts['dad_depth'] = counts[['father_ref_F', 'father_ref_R', 'father_alt_F', 'father_alt_R']].sum(axis=1)
+    counts['mom_depth'] = counts[['mother_ref_F', 'mother_ref_R', 'mother_alt_F', 'mother_alt_R']].sum(axis=1)
+    
+    # only include sites with good sample depths (different threshold for child
+    # and parents) and sufficient alts in the child
+    good_depth = (counts['child_alts'] > 1) & (counts['child_depth'] > 7) & \
+        (counts['dad_depth'] > 5)  &(counts['mom_depth'] > 5)
+    status &= good_depth
+    
     # check if sites deviate from expected strand bias and parental alt depths
     strand_bias, parental_site_bias = test_sites(counts, status)
     parental_gene_bias = test_genes(counts, strand_bias, status)
@@ -57,8 +68,6 @@ def filter_denovogear_sites(de_novos, status):
     gene_fail = (parental_gene_bias < P_CUTOFF) & de_novos["symbol"].isin(recurrent)
     site_fail = (parental_site_bias < P_CUTOFF)
     
-    counts['dad_depth'] = counts[['father_ref_F', 'father_ref_R', 'father_alt_F', 'father_alt_R']].sum(axis=1)
-    counts['mom_depth'] = counts[['mother_ref_F', 'mother_ref_R', 'mother_alt_F', 'mother_alt_R']].sum(axis=1)
     counts['parental_depth_threshold'] = counts[['dad_depth', 'mom_depth']].apply(min_depth, error=ERROR_RATE, axis=1)
     
     excess_alts = counts["min_parent_alt"] > counts['parental_depth_threshold']
