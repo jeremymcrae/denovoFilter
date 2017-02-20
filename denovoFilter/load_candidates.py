@@ -33,6 +33,7 @@ def load_candidates(candidates_path):
     
     candidates = pandas.read_table(candidates_path, na_filter=False)
     candidates['chrom'] = candidates['chrom'].astype(str)
+    candidates['pos'] = candidates['pos'].astype(int)
     
     # the missing indels don't have some columns that are present in the
     # denovogear input, use mock columns so that later processing works smoothly.
