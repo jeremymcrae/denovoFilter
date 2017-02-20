@@ -80,6 +80,7 @@ def main():
     # set a blank dataframe
     de_novos = pandas.DataFrame(columns=["person_stable_id", "chrom", "pos",
         "ref", "alt", "symbol", "consequence", "max_af", "pp_dnm"])
+    de_novos['pos'] = de_novos['pos'].astype(int)
     
     denovogear = screen_candidates(args.de_novos, args.sample_fails,
         filter_denovogear_sites, maf=0.01, fix_symbols=args.fix_missing_genes,
