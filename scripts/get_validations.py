@@ -36,12 +36,12 @@ def get_options():
     parser.add_argument("--ddd-1k-validations", \
         default="/nfs/ddd0/Data/datafreeze/1133trios_20131218/DNG_Validation_1133trios_20140130.tsv", \
         help="Path to file listing candidate de novos.")
-    parser.add_argument("--ddd-4k-validations", \
-        default="/lustre/scratch113/projects/ddd/users/jm33/de_novo_data/de_novos.ddd_4k.validation_results.2015-12-22.xlsx", \
+    parser.add_argument("--updated-validations", \
+        default="/lustre/scratch113/projects/ddd/users/jm33/de_novo_data/de_novos.validation_results.2017-02-22.xlsx", \
         help="Path to file listing candidate de novos indels (not found in \
             the standard de novo filtering).")
     parser.add_argument("--low-pp-dnm", \
-        default="/lustre/scratch113/projects/ddd/users/jm33/de_novo_data/de_novos.ddd_4k.validation_results.low_pp_dnm.2015-10-02.xlsx", \
+        default="/lustre/scratch113/projects/ddd/users/jm33/de_novo_data/de_novos.validation_results.low_pp_dnm.2017-02-22.xlsx", \
         help="Path to file listing family relationships (PED file).")
     parser.add_argument("--de-novos", \
         default="/lustre/scratch113/projects/ddd/users/jm33/de_novos.ddd_4k.ddd_only.2015-10-12.txt", \
@@ -50,9 +50,7 @@ def get_options():
         default="/lustre/scratch113/projects/ddd/users/jm33/de_novos.validation_results.{}.txt".format(str(date.today())), \
         help="Path to file for filtered de novos.")
     
-    args = parser.parse_args()
-    
-    return args
+    return parser.parse_args()
 
 def load_de_novo_calls(path):
     """ load a dataset of filtered de novo calls
@@ -75,10 +73,8 @@ def load_de_novo_calls(path):
     de_novos["chrom"] = de_novos["chrom"].astype("str")
     de_novos["end_pos"] = de_novos["start_pos"] + de_novos["ref_allele"].str.len() - 1
     
-    de_novos = de_novos[['person_id', 'sex', 'chrom', 'start_pos', 'end_pos',
+    return de_novos[['person_id', 'sex', 'chrom', 'start_pos', 'end_pos',
         'ref_allele', 'alt_allele', 'hgnc', 'consequence', 'max_af', 'pp_dnm']]
-    
-    return de_novos
 
 def load_ddd_1k_validations(path):
     """ load the data for the DDD 1K validation efforts
@@ -90,29 +86,27 @@ def load_ddd_1k_validations(path):
         pandas dataframe of candidates, restricted to specific columns
     """
     
-    validations = pandas.read_table(path, sep="\t")
+    data = pandas.read_table(path, sep="\t")
     
     # rename the columns I need
     recode = {"person_stable_id": "person_id", "chr": "chrom",
         "ref": "ref_allele", "alt": "alt_allele", "pos": "start_pos",
         "gene_name": "hgnc", "validation_result": "status"}
-    validations = validations.rename(columns=recode)
+    data = data.rename(columns=recode)
     
-    validations["end_pos"] = validations["start_pos"] + validations["ref_allele"].str.len() - 1
+    data["end_pos"] = data["start_pos"] + data["ref_allele"].str.len() - 1
     
     # recode the validation status to something easier to interpret
     recode = {"DNM": "de_novo", "FP": "false_positive", "U": "uncertain",
         "INH": "inherited", "P/U": "uncertain", "R": "uncertain"}
-    validations["status"] = validations["status"].map(recode)
+    data["status"] = data["status"].map(recode)
     
     # restrict the validations table to only a subset of columns. I don't want
     # to know the read depth, genotypes, conserved status etc.
-    validations = validations[["person_id", "chrom", "start_pos", "end_pos", \
+    return data[["person_id", "chrom", "start_pos", "end_pos",
         "ref_allele", "alt_allele", "status"]]
-    
-    return validations
 
-def load_ddd_4k_validations(path):
+def load_updated_validations(path):
     """ load the data for the DDD 4K validation efforts
     
     Args:
@@ -122,46 +116,15 @@ def load_ddd_4k_validations(path):
         pandas dataframe of candidates, restricted to specific columns
     """
     
-    validations = pandas.read_excel(path, sheetname="for_Jeremy")
+    data = pandas.read_excel(path, sheetname="Sheet1")
     # make sure the chromosome columns are string types
-    validations["chrom"] = validations["CHR"].astype("str")
-    validations["person_id"] = validations["ID"]
-    validations["start_pos"] = validations["POS"]
-    validations["ref_allele"] = validations["REF"]
-    validations["alt_allele"] = validations["ALT"]
-    validations["end_pos"] = validations["start_pos"] + validations["ref_allele"].str.len() - 1
+    data["chrom"] = data["chrom"].astype("str")
+    data["end_pos"] = data["start_pos"] + data["ref_allele"].str.len() - 1
     
-    # recode the validation status
-    status = validations["final manual score - edit format to match Best_model"]
-    amended_calls = validations["final review JM/Di 02.09.15"]
-    status[~amended_calls.isnull()] = amended_calls[~amended_calls.isnull()]
-    validations["status"] = status
-    
-    recode = {"did not validate (pcr/seq fail in child)" : "uncertain",
-        "did not validate (pcr/seq fail in child and mum)": "uncertain",
-        "dnm": "de_novo", "DNM": "de_novo", "DNM ": "de_novo",
-        "DNM child mosaic": "de_novo",
-        "DNM parental mosaic": "de_novo",
-        "DNM mosaic?": "de_novo",
-        "DNM mosaic in mother": "de_novo",
-        "DNM mosaic in father": "de_novo",
-        "DNM (potentially mosaic in father)": "de_novo",
-        "fp": "false_positive", "FP": "false_positive",
-        "inherited": "inherited", "Inherited": "inherited",
-        "inherited/mosaic?": "inherited",
-        "Inherited mum (child pcr fail)": "inherited",
-        "mosaic?": "inherited",
-        "present in proband (P/U)": "uncertain",
-        "present in proband (P/U) ": "uncertain",
-        "review in meeting - probably de novo": "de_novo", "unclear": "uncertain"}
-    validations["status"] = validations["status"].map(recode)
-    
-    validations = validations[["person_id", "chrom", "start_pos", "end_pos", \
+    return data[["person_id", "chrom", "start_pos", "end_pos", \
         "ref_allele", "alt_allele", "status"]]
-    
-    return validations
 
-def load_ddd_4k_low_pp_dnm_validations(path, de_novos):
+def load_low_pp_dnm_validations(path, de_novos):
     """ load the data for the DDD 4K low pp_dnm validation efforts
     
     Args:
@@ -171,33 +134,18 @@ def load_ddd_4k_low_pp_dnm_validations(path, de_novos):
         pandas dataframe of candidates, restricted to specific columns
     """
     
-    validations = pandas.read_excel(path, sheetname="Summary_Final_forDB")
+    data = pandas.read_excel(path, sheetname="Sheet1")
     # make sure the chromosome columns are string types
-    validations["chrom"] = validations["CHR"].astype("str")
-    validations["person_id"] = validations["ID"]
-    validations["start_pos"] = validations["POS"]
+    data["chrom"] = data["chrom"].astype("str")
+    data["start_pos"] = data["pos"]
     
-    validations = validations.merge(de_novos, how="inner",
+    data = data.merge(de_novos, how="inner",
         on=["person_id", "chrom", "start_pos"])
     
-    validations["end_pos"] = validations["start_pos"] + validations["ref_allele"].str.len() - 1
+    data["end_pos"] = data["start_pos"] + data["ref_allele"].str.len() - 1
     
-    # recode the validation status
-    validations["status"] = validations["manual_score"]
-    
-    recode = {"dnm" : "de_novo",
-        "dnm_low_alt": "de_novo",
-        "fp": "false_positive",
-        "inherited_pat": "inherited",
-        "parental_mosaic": "de_novo",
-        "p/u": "uncertain",
-        "unclear": "uncertain"}
-    validations["status"] = validations["status"].map(recode)
-    
-    validations = validations[["person_id", "chrom", "start_pos", "end_pos", \
+    return data[["person_id", "chrom", "start_pos", "end_pos", \
         "ref_allele", "alt_allele", "status"]]
-    
-    return validations
 
 def find_matching_site(row, de_novos):
     """ this identifies the correct position for variants
@@ -230,12 +178,12 @@ def find_matching_site(row, de_novos):
     
     return int(rows[matches].start_pos)
 
-def fix_incorrect_positions(validations, de_novos):
+def fix_incorrect_positions(data, de_novos):
     """ fix the indels with incorrect positions, by comparing them to the sites
     submitted for validations
     
     Args:
-        validations: pandas dataframe of validation results, where some have
+        data: pandas dataframe of validation results, where some have
             been swapped to incorrect coordinates.
         de_novos: pandas dataframe of all de novo candidate, so we can match the
             original call coordinates.
@@ -246,34 +194,32 @@ def fix_incorrect_positions(validations, de_novos):
     """
     
     # merge the de novo dataset, which includes a HGNC symbol for each candidate
-    validations = validations.merge(de_novos, how="left", \
+    data = data.merge(de_novos, how="left",
         on=["person_id", "chrom", "start_pos", "end_pos", "ref_allele", "alt_allele"])
     
     # some of the sites have changed positions during the validation efforts
-    missing = validations[validations.consequence.isnull()]
+    missing = data[data.consequence.isnull()]
     correct_positions = missing.apply(find_matching_site, axis=1, de_novos=de_novos)
-    validations.start_pos[validations.consequence.isnull()][correct_positions > 0] = correct_positions[correct_positions > 0]
+    data.start_pos[data.consequence.isnull()][correct_positions > 0] = correct_positions[correct_positions > 0]
     
-    validations = validations[["person_id", "chrom", "start_pos", "end_pos", "ref_allele", \
+    return data[["person_id", "chrom", "start_pos", "end_pos", "ref_allele", \
         "alt_allele", "status"]]
-    
-    return validations
 
-def count_validated_per_gene(validations):
+def count_validated_per_gene(data):
     """ count the number of sites which validated in each gene
     """
     
     # define whether each site validated or not
-    validated = pandas.Series([False] * len(validations["chrom"]))
-    validated[validations["status"].isin(["de_novo", "uncertain"])] = True
-    validations["validated"] = validated
+    validated = pandas.Series([False] * len(data["chrom"]))
+    validated[data["status"].isin(["de_novo", "uncertain"])] = True
+    data["validated"] = validated
     
-    counts = validations.pivot_table(values=["chrom"], rows=["hgnc"], cols=["validated"], aggfunc=len)
+    counts = data.pivot_table(values=["chrom"], rows=["hgnc"], cols=["validated"], aggfunc=len)
     
     # count the number of validated and invalidated candidates per gene
     hgnc = list(counts.index)
-    counts = pandas.DataFrame({"hgnc": hgnc, \
-        "validated": counts["chrom"][True].values, \
+    counts = pandas.DataFrame({"hgnc": hgnc,
+        "validated": counts["chrom"][True].values,
         "invalidated": counts["chrom"][False].values})
     
     counts["validated"][counts["validated"].isnull()] = 0
@@ -283,11 +229,11 @@ def count_validated_per_gene(validations):
     
     return counts
 
-def remove_duplicates(validations):
+def remove_duplicates(data):
     """ removes duplicate validations
     
     Args:
-        validations: dataframe of validation data
+        data: dataframe of validation data
     
     Returns:
         dataframe of validation data with duplicate rows removed, and where
@@ -295,10 +241,10 @@ def remove_duplicates(validations):
     """
     
     columns = ["person_id", "chrom", "start_pos"]
-    first = validations.duplicated(take_last=False, cols=columns)
-    second = validations.duplicated(take_last=True, cols=columns)
-    dups = validations[first | second]
-    without_dups = validations[~(first | second)]
+    first = data.duplicated(take_last=False, cols=columns)
+    second = data.duplicated(take_last=True, cols=columns)
+    dups = data[first | second]
+    without_dups = data[~(first | second)]
     
     # some of the duplicates have different validation status codes, such as one
     # being annotated a "uncertain, while the other is annotated as "de_novo".
@@ -310,20 +256,18 @@ def remove_duplicates(validations):
             row["status"] = "de_novo"
         fixed = fixed.append(row, ignore_index=True)
     
-    validations = without_dups.append(fixed)
-    
-    return(validations)
+    return without_dups.append(fixed)
 
 def main():
     args = get_options()
     de_novos = load_de_novo_calls(args.de_novos)
     
     ddd_1k_results = load_ddd_1k_validations(args.ddd_1k_validations)
-    ddd_4k_results = load_ddd_4k_validations(args.ddd_4k_validations)
-    ddd_4k_results = fix_incorrect_positions(ddd_4k_results, de_novos)
-    validations = ddd_4k_results.append(ddd_1k_results)
+    updated_results = load_updated_validations(args.updated_validations)
+    updated_results = fix_incorrect_positions(updated_results, de_novos)
+    validations = updated_results.append(ddd_1k_results)
     
-    low_pp_dnm = load_ddd_4k_low_pp_dnm_validations(args.low_pp_dnm, de_novos)
+    low_pp_dnm = load_low_pp_dnm_validations(args.low_pp_dnm, de_novos)
     validations = validations.append(low_pp_dnm)
     validations = remove_duplicates(validations)
     
