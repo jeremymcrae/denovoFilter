@@ -117,6 +117,7 @@ def load_updated_validations(path):
     data = pandas.read_excel(path, sheetname="Sheet1")
     # make sure the chromosome columns are string types
     data["chrom"] = data["chrom"].astype("str")
+    data["start_pos"] = data["pos"].astype(int)
     data["end_pos"] = data["start_pos"] + data["ref_allele"].str.len() - 1
     
     return data[["person_id", "chrom", "start_pos", "end_pos", \
@@ -136,6 +137,9 @@ def load_low_pp_dnm_validations(path, de_novos):
     # make sure the chromosome columns are string types
     data["chrom"] = data["chrom"].astype("str")
     data["start_pos"] = data["pos"]
+    
+    del data['ref_allele']
+    del data['alt_allele']
     
     data = data.merge(de_novos, how="inner",
         on=["person_id", "chrom", "start_pos"])
@@ -239,8 +243,8 @@ def remove_duplicates(data):
     """
     
     columns = ["person_id", "chrom", "start_pos"]
-    first = data.duplicated(take_last=False, cols=columns)
-    second = data.duplicated(take_last=True, cols=columns)
+    first = data.duplicated(take_last=False, subset=columns)
+    second = data.duplicated(take_last=True, subset=columns)
     dups = data[first | second]
     without_dups = data[~(first | second)]
     
@@ -253,6 +257,10 @@ def remove_duplicates(data):
         if "de_novo" in list(x["status"]):
             row["status"] = "de_novo"
         fixed = fixed.append(row, ignore_index=True)
+    
+    # make sure the fixed coordinates are represented as integers
+    fixed['start_pos'] = fixed['start_pos'].astype(int)
+    fixed['end_pos'] = fixed['end_pos'].astype(int)
     
     return without_dups.append(fixed)
 
