@@ -19,13 +19,11 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
-import os
 import argparse
 
 from datetime import date
 
 import pandas
-import numpy
 
 def get_options():
     """ get the command line options
@@ -44,7 +42,7 @@ def get_options():
         default="/lustre/scratch113/projects/ddd/users/jm33/de_novo_data/de_novos.validation_results.low_pp_dnm.2017-02-22.xlsx", \
         help="Path to file listing family relationships (PED file).")
     parser.add_argument("--de-novos", \
-        default="/lustre/scratch113/projects/ddd/users/jm33/de_novos.ddd_4k.ddd_only.2015-10-12.txt", \
+        default="/lustre/scratch113/projects/ddd/users/jm33/de_novos.ddd_8k.2016-11-28.txt", \
         help="Path to file listing family relationships (PED file).")
     parser.add_argument("--output", \
         default="/lustre/scratch113/projects/ddd/users/jm33/de_novos.validation_results.{}.txt".format(str(date.today())), \
