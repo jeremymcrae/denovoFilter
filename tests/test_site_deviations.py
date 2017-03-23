@@ -73,8 +73,12 @@ class TestSiteDeviations(unittest.TestCase):
         # check that values which would ordinarily give out of bounds errors
         # instead are converted to a p-value of 1.0. Some versions of scipy have
         # fixed this bug, and give a correct value, which we need to check too.
+        # A later scipy version (0.19.0) changed how the hypergeometric
+        # distribution is estimated, which shifts the Fisher exact p-value from
+        # the 7th significant figure onwards.
         site = {'ref_F': 1, 'ref_R': 2, 'alt_F': 9, 'alt_R': 84419233}
-        self.assertIn(site_strand_bias(site), (1.0, 3.5536923140874242e-07))
+        self.assertIn(site_strand_bias(site), (1.0, 3.5536923140874242e-07,
+            3.5536916732288063e-07))
     
     def test_test_sites(self):
         ''' check p-values from tests of strand and parental alt bias.
