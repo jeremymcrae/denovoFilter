@@ -151,10 +151,10 @@ def get_gene_id(chrom, start_pos, end_pos, build="grch37", verbose=False, attemp
             time.sleep(float(requested_headers["retry-after"]))
         elif "x-ratelimit-reset" in requested_headers:
             time.sleep(int(requested_headers["x-ratelimit-reset"]))
-        return get_gene_id_for_variant(chrom, start_pos, end_pos, build, verbose, attempts)
+        return get_gene_id(chrom, start_pos, end_pos, build, verbose, attempts)
     elif status_code in [503, 504]:
         time.sleep(30)
-        return get_gene_id_for_variant(chrom, start_pos, end_pos, build, verbose, attempts)
+        return get_gene_id(chrom, start_pos, end_pos, build, verbose, attempts)
     elif status_code != 200:
         raise ValueError('Invalid Ensembl response: {0}.\nSubmitted '
             'URL was: {1}{2}\nheaders: {3}\nresponse: {4}'.format(status_code,
