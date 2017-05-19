@@ -111,8 +111,8 @@ def test_genes(de_novos, strand_bias, pass_status=None):
     
     # exclude de novo SNVs that fail the strand bias filter, otherwise these
     # skew the parental alts within genes
-    sites = sites[(strand_bias >= P_CUTOFF) & (de_novos["ref"].str.len() == 1) &
-        (de_novos["alt"].str.len() == 1)]
+    sites = sites[(strand_bias >= P_CUTOFF) & (sites["ref"].str.len() == 1) &
+        (sites["alt"].str.len() == 1)]
     
     # cover the edge case where we don't have any sites for testing
     if len(sites) == 0:
