@@ -71,7 +71,6 @@ def test_sites(de_novos, pass_status=None):
     if pass_status is not None:
         alleles = alleles[pass_status]
     
-    alleles = alleles.convert_objects(convert_numeric=True)
     variants = alleles.groupby("key")
     
     # count the ref and alt alleles for each de novo site
@@ -121,9 +120,7 @@ def test_genes(de_novos, strand_bias, pass_status=None):
     sites = sites[["symbol",
         "mother_ref_F", "mother_ref_R", "mother_alt_F", "mother_alt_R",
         "father_ref_F", "father_ref_R", "father_alt_F", "father_alt_R"]].copy()
-    
-    sites = sites.convert_objects(convert_numeric=True)
-    
+        
     # count the number of parental alleles within genes, and restructure data
     # for testing
     genes = sites.groupby("symbol")
