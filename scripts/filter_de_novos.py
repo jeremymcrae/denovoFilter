@@ -66,6 +66,9 @@ def get_options():
     parser.add_argument("--include-recurrent", action='store_true', default=False,
         help="Use if you want to retain recurrent de novos within a family, or "
             "within an individual (per gene).")
+            
+    parser.add_argument("--build", default='grch37',
+        help="Genome build to use to pick missing symbols.")
     
     parser.add_argument("--output", default=sys.stdout,
         help="Path to file for filtered de novos. Defaults to standard out.")
@@ -84,11 +87,11 @@ def main():
     
     denovogear = screen_candidates(args.de_novos, args.sample_fails,
         filter_denovogear_sites, maf=0.01, fix_symbols=args.fix_missing_genes,
-        annotate_only=args.annotate_only)
+        annotate_only=args.annotate_only, build=args.build)
     
     indels = screen_candidates(args.de_novos_indels, args.sample_fails_indels,
         filter_missing_indels, maf=0.0001, fix_symbols=args.fix_missing_genes,
-        annotate_only=args.annotate_only)
+        annotate_only=args.annotate_only, build=args.build)
     
     de_novos = de_novos.append(denovogear, ignore_index=True)
     de_novos = de_novos.append(indels, ignore_index=True)
@@ -112,6 +115,9 @@ def main():
             de_novos['pass'] = de_novos['pass'] & independent
         else:
             de_novos = de_novos[independent]
+    
+    ids = ['DDDP123847', 'DDDP138759', 'DDDP135949', 'DDDP100238', 'DDDP125725', 'DDDP118316']
+    de_novos = de_novos[~de_novos.person_stable_id.isin(ids)]
     
     de_novos.to_csv(args.output, sep= "\t", index=False, na_rep='NA')
 

@@ -26,7 +26,7 @@ from denovoFilter.missing_symbols import fix_missing_gene_symbols
 from denovoFilter.standardise import standardise_columns
 
 def screen_candidates(de_novos_path, fails_path, filter_function, maf=0.01,
-        fix_symbols=True, annotate_only=False):
+        fix_symbols=True, annotate_only=False, build='grch37'):
     """ load and optionally filter candidate de novo mutations.
     
     Args:
@@ -41,6 +41,8 @@ def screen_candidates(de_novos_path, fails_path, filter_function, maf=0.01,
             missing these.
         annotate_only: whether to include a column indicating pass status, rather
             than excluding all candidates which fail the filtering.
+        build: whether to use the 'grch37' or 'grch38' build to get
+            missing symbols.
     
     Returns:
         pandas DataFrame of candidate de novo mutations.
@@ -60,7 +62,7 @@ def screen_candidates(de_novos_path, fails_path, filter_function, maf=0.01,
     segdup = check_segdups(de_novos)
     
     if fix_symbols:
-        de_novos['symbol'] = fix_missing_gene_symbols(de_novos)
+        de_novos['symbol'] = fix_missing_gene_symbols(de_novos, build)
     
     pass_status = filter_function(de_novos, status & segdup) & status & segdup
     

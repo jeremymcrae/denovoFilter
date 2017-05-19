@@ -35,11 +35,12 @@ import pandas
 PREV_TIME = time.time()
 IS_PYTHON3 = sys.version[0] == "3"
 
-def fix_missing_gene_symbols(de_novos):
+def fix_missing_gene_symbols(de_novos, build='grch37'):
     """ adds gene symbols to variants lacking them.
     
     Args:
         de_novos: dataframe of de novo variants
+        build: whether to use the 'grch37' or 'grch38' build (default=GRCh37)
     
     Returns:
         pandas Series of HGNC symbols, with additional annotations for many
@@ -54,7 +55,7 @@ def fix_missing_gene_symbols(de_novos):
     missing['end'] = missing["pos"] + missing["ref"].str.len() - 1
     
     # find the HGNC symbols (if any) for the variants
-    missing = [ get_gene_id(x["chrom"], x["pos"], x['end'], verbose=True) for i, x in missing.iterrows() ]
+    missing = [ get_gene_id(x["chrom"], x["pos"], x['end'], build=build, verbose=True) for i, x in missing.iterrows() ]
     symbols[de_novos["symbol"] == ""] = missing
     
     # 360 out of 17000 de novos still lack HGNC symbols. Their consequences are:
