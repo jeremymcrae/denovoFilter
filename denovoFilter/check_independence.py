@@ -41,7 +41,7 @@ def person_recurrence(de_novos):
     
     # find the variants which are recurrent within a person in a single gene
     from_start = de_novos.duplicated(["person_stable_id", "symbol"])
-    from_end = de_novos.duplicated(["person_stable_id", "symbol"], take_last=True)
+    from_end = de_novos.duplicated(["person_stable_id", "symbol"], keep='last')
     
     person_dups = from_start | from_end
     in_person_dups = de_novos[person_dups]
