@@ -29,7 +29,7 @@ setup(
     description = ("Filtering candidate de novo variants."),
     license = "MIT",
     packages=["denovoFilter"],
-    install_requires=['pandas >= 0.13.1',
+    install_requires=['pandas >= 0.17.0',
                       'numpy >= 1.6.1',
                       'scipy >= 0.9.0',
                       'intervaltree >= 2.0',

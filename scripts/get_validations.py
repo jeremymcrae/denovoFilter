@@ -243,8 +243,8 @@ def remove_duplicates(data):
     """
     
     columns = ["person_id", "chrom", "start_pos"]
-    first = data.duplicated(take_last=False, subset=columns)
-    second = data.duplicated(take_last=True, subset=columns)
+    first = data.duplicated(keep='first', subset=columns)
+    second = data.duplicated(keep='last', subset=columns)
     dups = data[first | second]
     without_dups = data[~(first | second)]
     
