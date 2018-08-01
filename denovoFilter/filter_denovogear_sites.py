@@ -76,4 +76,7 @@ def filter_denovogear_sites(de_novos, status):
     sites = pandas.DataFrame({"gene": gene_fail, "site": site_fail, "alts": excess_alts})
     overall_pass[sites.sum(axis=1) >= 2] = False
     
+    # drop out sites with poor depths
+    overall_pass &= good_depth  
+    
     return overall_pass
